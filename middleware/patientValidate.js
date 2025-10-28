@@ -11,8 +11,8 @@ validate.patientValidationRules = () => {
     .isEmail().withMessage('Email is not valid'),
     body('phone').notEmpty().withMessage('Phone number is required'),
     body('birthday')
-    .notEmpty('Birthday is required')
-    .isDate('Birthday must be a valid date'),
+    .notEmpty().withMessage('Birthday is required')
+    .isISO8601().withMessage('Birthday must be a valid date'),
   ];
 };
 
