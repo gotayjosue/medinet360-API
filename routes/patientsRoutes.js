@@ -11,7 +11,7 @@ const validate = require("../middleware/patientValidate.js");
 
 const router = express.Router();
 
-router.use(requireAuth); // todas requieren estar logueado
+// router.use(requireAuth); // todas requieren estar logueado
 
 router.get("/", getPatients);
 router.get("/:id", getPatientById);
