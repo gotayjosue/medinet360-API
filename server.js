@@ -6,6 +6,7 @@ const { connectToDatabase } = require('./models/database');
 const methodOverride = require('method-override');
 const flash = require('connect-flash');
 const session = require('express-session');
+const cors = require('cors')
 
 const authRoutes = require("./routes/authRoutes.js");
 const patientsRoutes = require("./routes/patientsRoutes.js");
@@ -31,6 +32,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 
 app.use(flash());
+
+// Enable CORS for all routes. Adjust options below for a stricter policy
+// (e.g., restrict origin, enable credentials) as needed.
+app.use(cors());
 
 // Middleware to make flash messages available in all views
 app.use((req, res, next) => {
