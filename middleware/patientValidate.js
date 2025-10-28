@@ -5,8 +5,8 @@ const validate = {};
 validate.patientValidationRules = () => {
   return [
     body('name').notEmpty().withMessage('Name is required'),
-    body('age').isInt({ min: 0 }).withMessage('Age must be a positive integer'),
     body('email').isEmail().withMessage('Email is not valid'),
+    body('phone').notEmpty().withMessage('Phone number is required')
   ];
 };
 
