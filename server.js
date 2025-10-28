@@ -33,9 +33,13 @@ app.use(methodOverride('_method'));
 
 app.use(flash());
 
-// Enable CORS for all routes. Adjust options below for a stricter policy
-// (e.g., restrict origin, enable credentials) as needed.
-app.use(cors());
+app.use(
+  cors({
+    origin: 'https://medinet360-api.onrender.com/',          // dominios que pueden hacer peticiones
+    credentials: true,                       // si usas cookies (no en este caso)
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Middleware to make flash messages available in all views
 app.use((req, res, next) => {
