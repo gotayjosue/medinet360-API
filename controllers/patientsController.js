@@ -24,10 +24,28 @@ const getPatientById = async (req, res) => {
   }
 };
 
+//Calcular la edad
+const calculateAge = (birthday) => {
+  const today  = new Date();
+  const birth  = new Date(birthday);                // birthday es ISO (YYYY-MM-DD)
+
+  let age = today.getFullYear() - birth.getFullYear();
+  const m  = today.getMonth() - birth.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;        // todavía no ha cumplido su cumpleaños este año
+  }
+  return age;
+};
+
 // 🔹 Crear paciente
 const createPatient = async (req, res) => {
   try {
-    const { name, email, phone, customFields } = req.body;
+    const { name, lastName, birthday, email, phone, customFields } = req.body;
+
+    //Calculating age before creating patient object
+    const age = calculateAge(birthday)
+
     const patient = await Patient.create({
       name,
       lastName,
