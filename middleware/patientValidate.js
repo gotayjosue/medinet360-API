@@ -5,8 +5,14 @@ const validate = {};
 validate.patientValidationRules = () => {
   return [
     body('name').notEmpty().withMessage('Name is required'),
-    body('email').isEmail().withMessage('Email is not valid'),
-    body('phone').notEmpty().withMessage('Phone number is required')
+    body('lastName').notEmpty().withMessage('Last name is required'),
+    body('email')
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Email is not valid'),
+    body('phone').notEmpty().withMessage('Phone number is required'),
+    body('birthday')
+    .notEmpty('Birthday is required')
+    .isDate('Birthday must be a valid date'),
   ];
 };
 

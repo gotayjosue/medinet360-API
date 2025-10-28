@@ -30,8 +30,11 @@ const createPatient = async (req, res) => {
     const { name, email, phone, customFields } = req.body;
     const patient = await Patient.create({
       name,
+      lastName,
       email,
       phone,
+      age,
+      birthday,
       clinicId: req.user.clinicId,
       createdBy: req.user.userId,
       customFields,
