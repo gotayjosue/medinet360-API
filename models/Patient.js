@@ -8,6 +8,7 @@ const patientSchema = new mongoose.Schema(
     email: { type: String, required: true },
     phone: { type: String, required: true},
     birthday: {type: Date, required: true },
+    age: { type: Number, required: true},
     clinicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Clinic",
