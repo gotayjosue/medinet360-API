@@ -36,11 +36,7 @@ app.use(flash());
 const allowedDomains = [
 "https://medinet360-api.onrender.com/", 
 "http://localhost:5173",
-"https://medinet360.netlify.app/signin",
-"https://medinet360.netlify.app/dashboard/patients",
-"https://medinet360.netlify.app/dashboard/appointments",
-"https://medinet360.netlify.app/dashboard/reports",
-"https://medinet360.netlify.app/dashboard/account"]
+"https://medinet360.netlify.app/"]
 
 app.use(
   cors({
