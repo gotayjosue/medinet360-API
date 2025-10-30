@@ -33,15 +33,14 @@ app.use(methodOverride('_method'));
 
 app.use(flash());
 
-const allowedDomains = [
-"https://medinet360-api.onrender.com/", 
+const allowedOrigins = [ 
 "http://localhost:5173",
-"https://medinet360.netlify.app/"]
+"https://medinet360.netlify.app"]
 
 app.use(
   cors({
-    origin: allowedDomains,          // dominios que pueden hacer peticiones
-    credentials: true,                       // si usas cookies (no en este caso)
+    origin: allowedOrigins,
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
