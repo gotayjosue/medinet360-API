@@ -13,6 +13,11 @@ validate.patientValidationRules = () => {
     body('birthday')
     .notEmpty().withMessage('Birthday is required')
     .isISO8601().withMessage('Birthday must be a valid date'),
+    body('gender')
+    .notEmpty().withMessage('Gender is required')
+    .trim()
+    .toLowerCase()
+    .isIn(['male', 'female']).withMessage('Gender must be "male" or "female"'),
   ];
 };
 
