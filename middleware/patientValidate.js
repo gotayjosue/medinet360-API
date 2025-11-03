@@ -12,7 +12,7 @@ validate.patientValidationRules = () => {
     body('phone').notEmpty().withMessage('Phone number is required'),
     body('birthday')
     .notEmpty().withMessage('Birthday is required')
-    .isISO8601().withMessage('Birthday must be a valid date'),
+    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Birthday must be in YYYY-MM-DD format (e.g., 1998-11-17)'),
     body('gender')
     .notEmpty().withMessage('Gender is required')
     .trim()
