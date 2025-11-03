@@ -10,6 +10,7 @@ const patientSchema = new mongoose.Schema(
     birthday: {type: Date, required: true },
     age: { type: Number, required: true},
     gender: { type: String, required: true},
+    notes: { type: String},
     clinicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Clinic",

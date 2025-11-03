@@ -41,7 +41,7 @@ const calculateAge = (birthday) => {
 // 🔹 Crear paciente
 const createPatient = async (req, res) => {
   try {
-    const { name, lastName, birthday, email, phone, gender, customFields } = req.body;
+    const { name, lastName, birthday, email, phone, gender, notes, customFields } = req.body;
 
     //Calculating age before creating patient object
     const age = calculateAge(birthday)
@@ -54,6 +54,7 @@ const createPatient = async (req, res) => {
       age,
       gender,
       birthday,
+      notes,
       clinicId: req.user.clinicId,
       createdBy: req.user.userId,
       customFields,
