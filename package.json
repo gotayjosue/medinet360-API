@@ -25,6 +25,8 @@
     "method-override": "^3.0.0",
     "mongoose": "^8.19.0",
     "node": "^24.9.0",
-    "nodemon": "^3.1.10"
+    "nodemailer": "^7.0.11",
+    "nodemon": "^3.1.10",
+    "serverless-http": "^4.0.0"
   }
 }

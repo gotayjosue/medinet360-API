@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { type } = require("os");
 
 const appointmentSchema = new mongoose.Schema(
   {
@@ -7,7 +8,7 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Patient",
       required: true,
     },
-    dentistId: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // doctor o asistente
       required: true,
@@ -17,13 +18,11 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Clinic",
       required: true,
     },
-    date: { type: Date, required: true },
+    date: { type: String, required: true },
+    hour: { type: String, required: true },
+    duration: { type: Number, required: true },
     description: { type: String },
-    status: {
-      type: String,
-      enum: ["scheduled", "completed", "cancelled"],
-      default: "scheduled",
-    },
+    status: {type: String, required: true, },
   },
   { timestamps: true }
 );

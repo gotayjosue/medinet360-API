@@ -7,6 +7,7 @@ const {
   deletePatient,
 } = require("../controllers/patientsController.js");
 const { requireAuth } = require("../middleware/requireAuth.js");
+const checkPermissions = require("../middleware/checkPermissions.js");
 const validate = require("../middleware/patientValidate.js");
 
 const router = express.Router();
@@ -15,8 +16,8 @@ router.use(requireAuth); // todas requieren estar logueado
 
 router.get("/", getPatients);
 router.get("/:id", getPatientById);
-router.post("/", validate.patientValidationRules(), validate.check, createPatient);
-router.put("/:id", validate.patientValidationRules(), validate.check, updatePatient);
-router.delete("/:id", deletePatient);
+router.post("/", checkPermissions("createPatient"), validate.patientValidationRules(), validate.check, createPatient);
+router.put("/:id", checkPermissions("editPatient"), validate.patientValidationRules(), validate.check, updatePatient);
+router.delete("/:id", checkPermissions("deletePatient"), deletePatient);
 
 module.exports = router;

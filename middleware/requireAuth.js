@@ -12,11 +12,11 @@ const requireAuth = async (req, res, next) => {
     const user = await User.findById(decoded.userId).select("-password");
     if (!user) return res.status(401).json({ error: "Usuario no válido" });
 
-    req.user = decoded; // contiene userId, role y clinicId
+    req.user = user; // contiene el objeto completo del usuario desde la BDD
     next();
   } catch (error) {
     res.status(401).json({ error: "Token inválido o expirado" });
   }
 };
 
-module.exports = {requireAuth}
+module.exports = { requireAuth }

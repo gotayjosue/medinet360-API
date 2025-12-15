@@ -5,21 +5,58 @@ const getAppointments = async (req, res) => {
   try {
     const appointments = await Appointment.find({ clinicId: req.user.clinicId })
       .populate("patientId")
-      .populate("dentistId");
+      .populate("createdBy");
     res.status(200).json(appointments);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+// 🔹 Obtener cita por ID
+const getAppointmentById = async (req, res) => {
+  try {
+    const appointment = await Appointment.findOne({
+      _id: req.params.id,
+      clinicId: req.user.clinicId
+    })
+      .populate("patientId")
+      .populate("createdBy");
+
+    if (!appointment) {
+      return res.status(404).json({ error: "Cita no encontrada" });
+    }
+
+    res.status(200).json(appointment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 // 🔹 Crear cita
 const createAppointment = async (req, res) => {
   try {
-    const { patientId, dentistId, date, description } = req.body;
+    // Recibimos timeZone del frontend
+    const { patientId, date, hour, duration, status, description, timeZone } = req.body;
+
+    // Usamos la zona horaria del usuario (o 'UTC' por defecto si no llega)
+    const userTimeZone = timeZone || 'UTC';
+
+    // Obtenemos la fecha de "hoy" EN LA ZONA HORARIA DEL USUARIO
+    // toLocaleDateString('en-CA') nos da formato YYYY-MM-DD
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimeZone });
+
+    if (date < today) {
+      return res.status(400).json({ error: "La fecha de la cita no puede ser en el pasado" });
+    }
+
     const appointment = await Appointment.create({
       patientId,
-      dentistId,
-      date,
+      createdBy: req.user._id,
+      date: date,
+      hour,
+      duration,
+      status,
       description,
       clinicId: req.user.clinicId,
     });
@@ -62,6 +99,7 @@ const deleteAppointment = async (req, res) => {
 
 module.exports = {
   getAppointments,
+  getAppointmentById,
   createAppointment,
   updateAppointment,
   deleteAppointment
