@@ -105,6 +105,41 @@ const getProfile = async (req, res) => {
   }
 };
 
+//Actualizar datos de usuario
+const updateProfile = async (req, res) => {
+  try{
+    const { name, lastName, email } = req.body;
+    const clinicId = req.user.clinicId;
+
+    const user = await User.findOneAndUpdate(
+      { _id: req.user.id, clinicId },
+      {
+        name,
+        lastName,
+        email,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    res.status(200).json(user);
+  }catch (error) {
+    //Manejo de email duplicado
+    if (error.code === 11000) {
+      return res.status(400).json({ error: "El correo ya está en uso" });
+    }
+
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
 // Logout
 function logout(req, res) {
   req.session.destroy(err => {
@@ -117,4 +152,4 @@ function logout(req, res) {
   });
 }
 
-module.exports = { login, register, getProfile, logout }
+module.exports = { login, register, getProfile, updateProfile, logout }
