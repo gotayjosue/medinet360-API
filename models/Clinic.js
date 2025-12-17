@@ -9,6 +9,13 @@ const clinicSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    customFieldTemplate: [
+      {
+        label: { type: String, required: true },
+        type: { type: String, required: true },
+        options: [{ type: String }],
+      }
+    ],
   },
   { timestamps: true }
 );
