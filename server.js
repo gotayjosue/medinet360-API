@@ -59,7 +59,7 @@ app.use("/", routes);
 app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientsRoutes);
 app.use("/api/appointments", appointmentsRoutes);
-app.use("/api/clinics", clinicsRoutes);
+app.use("/api/clinic", clinicsRoutes);
 app.use("/api/assistants", assistantRoutes);
 
 const PORT = process.env.PORT || 3000;
