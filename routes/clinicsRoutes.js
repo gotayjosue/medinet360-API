@@ -1,7 +1,7 @@
 const express = require("express");
 const { getClinicById, updateCustomFieldsTemplate, updateClinic } = require("../controllers/clinicsController.js");
 const { requireAuth } = require("../middleware/requireAuth.js");
-const { validate } = require("../middleware/clinicValidate.js");
+const validate = require("../middleware/clinicValidate.js");
 
 const router = express.Router();
 
