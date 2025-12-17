@@ -33,7 +33,29 @@ const updateCustomFieldsTemplate = async (req, res) => {
   }
 };
 
+const updateClinic = async (req, res) => {
+  const { id } = req.params;
+  const { name, address, phone } = req.body;
+
+  try {
+    const clinic = await Clinic.findByIdAndUpdate(
+      id,
+      { name, address, phone },
+      { new: true, runValidators: true }
+    );
+
+    if (!clinic) {
+      return res.status(404).json({ error: "Clinic not found" });
+    }
+
+    res.status(200).json(clinic);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getClinicById,
-  updateCustomFieldsTemplate
+  updateCustomFieldsTemplate,
+  updateClinic
 }
