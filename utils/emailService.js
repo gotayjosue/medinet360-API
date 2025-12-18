@@ -1,9 +1,4 @@
-const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
-
-const mailersend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY,
-});
-const sentFrom = new Sender(process.env.MAILERSEND_DOMAIN, "Medinet360");
+const { sendEmail } = require("./awsConfig");
 
 /**
  * Envía un correo de notificación de activación de cuenta.
@@ -12,13 +7,10 @@ const sentFrom = new Sender(process.env.MAILERSEND_DOMAIN, "Medinet360");
  */
 const sendAccountActivationEmail = async (email, name) => {
   try {
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo([
-        new Recipient(email, name)
-      ])
-      .setSubject("Cuenta Activada - Medinet360")
-      .setHtml(`
+    await sendEmail({
+      to: email,
+      subject: "Cuenta Activada - Medinet360",
+      html: `
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta de asistente ha sido aprobada por el doctor.</p>
         <p>
@@ -31,10 +23,8 @@ const sendAccountActivationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `);
-
-    await mailersend.email.send(emailParams);
-
+      `,
+    });
     console.log("📧 Correo de activación enviado a:", email);
   } catch (error) {
     console.error("❌ Error enviando correo de activación:", error);
@@ -49,13 +39,10 @@ const sendAccountActivationEmail = async (email, name) => {
  */
 const sendAccountRejectionEmail = async (email, name) => {
   try {
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo([
-        new Recipient(email, name)
-      ])
-      .setSubject("Cuenta Rechazada - Medinet360")
-      .setHtml(`
+    await sendEmail({
+      to: email,
+      subject: "Cuenta Rechazada - Medinet360",
+      html: `
         <h1>Hola ${name}</h1>
         <p>
           Lamentamos informarte que tu solicitud de cuenta de asistente
@@ -68,10 +55,8 @@ const sendAccountRejectionEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `);
-
-    await mailersend.email.send(emailParams);
-
+      `,
+    });
     console.log("📧 Correo de rechazo enviado a:", email);
   } catch (error) {
     console.error("❌ Error enviando correo de rechazo:", error);
@@ -85,13 +70,10 @@ const sendAccountRejectionEmail = async (email, name) => {
  */
 const sendDoctorAccountCreationEmail = async (email, name) => {
   try {
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo([
-        new Recipient(email, name)
-      ])
-      .setSubject("Cuenta Creada - Medinet360")
-      .setHtml(`
+    await sendEmail({
+      to: email,
+      subject: "Cuenta Creada - Medinet360",
+      html: `
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta ha sido creada exitosamente.</p>
         <p>
@@ -104,10 +86,8 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `);
-
-    await mailersend.email.send(emailParams);
-
+      `,
+    });
     console.log("📧 Correo de creación enviado a:", email);
   } catch (error) {
     console.error("❌ Error enviando correo de creación:", error);
@@ -122,13 +102,10 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
  */
 const sendAssistantAccountCreationEmail = async (email, name) => {
   try {
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo([
-        new Recipient(email, name)
-      ])
-      .setSubject("Cuenta Creada - Medinet360")
-      .setHtml(`
+    await sendEmail({
+      to: email,
+      subject: "Cuenta Creada - Medinet360",
+      html: `
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta de asistente ha sido creada exitosamente.</p>
         <p>
@@ -140,10 +117,8 @@ const sendAssistantAccountCreationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `);
-
-    await mailersend.email.send(emailParams);
-
+      `,
+    });
     console.log("📧 Correo de creación enviado a:", email);
   } catch (error) {
     console.error("❌ Error enviando correo de creación:", error);
