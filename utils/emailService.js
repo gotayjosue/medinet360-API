@@ -1,6 +1,8 @@
 const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
-const mailersend = new MailerSend(process.env.MAILERSEND_API_KEY);
+const mailersend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
 const sentFrom = new Sender(process.env.MAILERSEND_DOMAIN, "Medinet360");
 
 /**
