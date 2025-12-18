@@ -14,7 +14,7 @@ const sendAccountActivationEmail = async (email, name) => {
   try {
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setTo(new Recipient(email))
+      .setTo(new Recipient(email, name))
       .setSubject("Cuenta Activada - Medinet360")
       .setHtml(`
         <h1>¡Hola ${name}!</h1>
@@ -49,7 +49,7 @@ const sendAccountRejectionEmail = async (email, name) => {
   try {
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setTo(new Recipient(email))
+      .setTo(new Recipient(email, name))
       .setSubject("Cuenta Rechazada - Medinet360")
       .setHtml(`
         <h1>Hola ${name}</h1>
@@ -83,7 +83,7 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
   try {
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setTo(new Recipient(email))
+      .setTo(new Recipient(email, name))
       .setSubject("Cuenta Creada - Medinet360")
       .setHtml(`
         <h1>¡Hola ${name}!</h1>
@@ -118,7 +118,7 @@ const sendAssistantAccountCreationEmail = async (email, name) => {
   try {
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setTo(new Recipient(email))
+      .setTo(new Recipient(email, name))
       .setSubject("Cuenta Creada - Medinet360")
       .setHtml(`
         <h1>¡Hola ${name}!</h1>
