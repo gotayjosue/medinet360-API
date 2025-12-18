@@ -1,6 +1,7 @@
-const { Resend } = require("resend");
+const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const mailersend = new MailerSend(process.env.MAILERSEND_API_KEY);
+const sentFrom = new Sender(process.env.MAILERSEND_DOMAIN, "Medinet360");
 
 /**
  * Envía un correo de notificación de activación de cuenta.
@@ -9,11 +10,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  */
 const sendAccountActivationEmail = async (email, name) => {
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM,
-      to: email,
-      subject: "Cuenta Activada - Medinet360",
-      html: `
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(new Recipient(email))
+      .setSubject("Cuenta Activada - Medinet360")
+      .setHtml(`
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta de asistente ha sido aprobada por el doctor.</p>
         <p>
@@ -26,8 +27,9 @@ const sendAccountActivationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `,
-    });
+      `);
+
+    await mailersend.email.send(emailParams);
 
     console.log("📧 Correo de activación enviado a:", email);
   } catch (error) {
@@ -43,11 +45,11 @@ const sendAccountActivationEmail = async (email, name) => {
  */
 const sendAccountRejectionEmail = async (email, name) => {
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM,
-      to: email,
-      subject: "Solicitud de Cuenta - Medinet360",
-      html: `
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(new Recipient(email))
+      .setSubject("Cuenta Rechazada - Medinet360")
+      .setHtml(`
         <h1>Hola ${name}</h1>
         <p>
           Lamentamos informarte que tu solicitud de cuenta de asistente
@@ -60,8 +62,9 @@ const sendAccountRejectionEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `,
-    });
+      `);
+
+    await mailersend.email.send(emailParams);
 
     console.log("📧 Correo de rechazo enviado a:", email);
   } catch (error) {
@@ -76,11 +79,11 @@ const sendAccountRejectionEmail = async (email, name) => {
  */
 const sendDoctorAccountCreationEmail = async (email, name) => {
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM,
-      to: email,
-      subject: "Cuenta Creada - Medinet360",
-      html: `
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(new Recipient(email))
+      .setSubject("Cuenta Creada - Medinet360")
+      .setHtml(`
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta ha sido creada exitosamente.</p>
         <p>
@@ -93,8 +96,9 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `,
-    });
+      `);
+
+    await mailersend.email.send(emailParams);
 
     console.log("📧 Correo de creación enviado a:", email);
   } catch (error) {
@@ -110,11 +114,11 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
  */
 const sendAssistantAccountCreationEmail = async (email, name) => {
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM,
-      to: email,
-      subject: "Cuenta Creada - Medinet360",
-      html: `
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(new Recipient(email))
+      .setSubject("Cuenta Creada - Medinet360")
+      .setHtml(`
         <h1>¡Hola ${name}!</h1>
         <p>Tu cuenta de asistente ha sido creada exitosamente.</p>
         <p>
@@ -126,8 +130,9 @@ const sendAssistantAccountCreationEmail = async (email, name) => {
         <br />
         <p>Saludos,</p>
         <p><strong>El equipo de Medinet360</strong></p>
-      `,
-    });
+      `);
+
+    await mailersend.email.send(emailParams);
 
     console.log("📧 Correo de creación enviado a:", email);
   } catch (error) {
