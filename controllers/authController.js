@@ -3,6 +3,9 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
 const Clinic = require("../models/Clinic.js");
 const { error } = require("console");
+const { 
+  sendDoctorAccountCreationEmail, 
+  sendAssistantAccountCreationEmail } = require("../utils/emailService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -62,7 +65,15 @@ const register = async (req, res) => {
       await Clinic.findByIdAndUpdate(assignedClinicId, { adminId: user._id });
     }
 
+    // Enviar correo de creación de cuenta
+    if (role === "assistant") {
+      await sendAssistantAccountCreationEmail(user.email, user.name);
+    }else{
+      await sendDoctorAccountCreationEmail(user.email, user.name);
+    }
+
     res.status(201).json({ message: "Usuario registrado correctamente", user });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

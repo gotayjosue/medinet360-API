@@ -69,7 +69,76 @@ const sendAccountRejectionEmail = async (email, name) => {
   }
 };
 
+/**
+ * Envía un correo de notificación de creación de cuenta para doctores.
+ * @param {string} email - Correo del destinatario
+ * @param {string} name - Nombre del usuario
+ */
+const sendDoctorAccountCreationEmail = async (email, name) => {
+  try {
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: "Cuenta Creada - Medinet360",
+      html: `
+        <h1>¡Hola ${name}!</h1>
+        <p>Tu cuenta ha sido creada exitosamente.</p>
+        <p>
+          Ya puedes 
+          <a href="https://medinet360.netlify.app/signin">
+            iniciar sesión
+          </a> 
+          en la plataforma.
+        </p>
+        <br />
+        <p>Saludos,</p>
+        <p><strong>El equipo de Medinet360</strong></p>
+      `,
+    });
+
+    console.log("📧 Correo de creación enviado a:", email);
+  } catch (error) {
+    console.error("❌ Error enviando correo de creación:", error);
+    // No lanzamos error para no romper el flujo
+  }
+};
+
+/**
+ * Envía un correo de notificación de creación de cuenta para doctores.
+ * @param {string} email - Correo del destinatario
+ * @param {string} name - Nombre del usuario
+ */
+const sendAssistantAccountCreationEmail = async (email, name) => {
+  try {
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: "Cuenta Creada - Medinet360",
+      html: `
+        <h1>¡Hola ${name}!</h1>
+        <p>Tu cuenta de asistente ha sido creada exitosamente.</p>
+        <p>
+          Debes esperar a que el doctor que te asignó apruebe tu cuenta.
+        </p>
+        <p>
+          Se te notificará cuando tu cuenta sea aprobada.
+        </p>
+        <br />
+        <p>Saludos,</p>
+        <p><strong>El equipo de Medinet360</strong></p>
+      `,
+    });
+
+    console.log("📧 Correo de creación enviado a:", email);
+  } catch (error) {
+    console.error("❌ Error enviando correo de creación:", error);
+    // No lanzamos error para no romper el flujo
+  }
+};
+
 module.exports = {
   sendAccountActivationEmail,
   sendAccountRejectionEmail,
+  sendDoctorAccountCreationEmail,
+  sendAssistantAccountCreationEmail,
 };
