@@ -1,4 +1,34 @@
-const { sendEmail } = require("./awsConfig");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+/**
+ * Función interna para enviar correos usando Resend
+ * @param {Object} params - Parámetros del correo
+ * @param {string} params.to - Destinatario
+ * @param {string} params.subject - Asunto
+ * @param {string} params.html - Contenido HTML
+ */
+const sendEmail = async ({ to, subject, html }) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: "Medinet360 <medinet360.com>", // Cambia esto a tu dominio verificado cuando esté listo
+      to: to,
+      subject: subject,
+      html: html,
+    });
+
+    if (error) {
+      console.error("❌ Error enviando correo con Resend:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error en sendEmail:", error);
+    throw error;
+  }
+};
 
 /**
  * Envía un correo de notificación de activación de cuenta.
@@ -96,7 +126,7 @@ const sendDoctorAccountCreationEmail = async (email, name) => {
 };
 
 /**
- * Envía un correo de notificación de creación de cuenta para doctores.
+ * Envía un correo de notificación de creación de cuenta para asistentes.
  * @param {string} email - Correo del destinatario
  * @param {string} name - Nombre del usuario
  */
