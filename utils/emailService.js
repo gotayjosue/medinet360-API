@@ -12,7 +12,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const sendEmail = async ({ to, subject, html }) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: "Medinet360 <medinet360.com>", // Cambia esto a tu dominio verificado cuando esté listo
+      from: "Medinet360 <noreply@medinet360.com>", // Cambia esto a tu dominio verificado cuando esté listo
       to: to,
       subject: subject,
       html: html,
