@@ -156,9 +156,37 @@ const sendAssistantAccountCreationEmail = async (email, name) => {
   }
 };
 
+/**
+ * Envía un correo con el enlace para restablecer la contraseña.
+ * @param {string} email - Correo del destinatario
+ * @param {string} resetUrl - URL para restablecer la contraseña
+ */
+const sendPasswordResetEmail = async (email, resetUrl) => {
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Recuperación de Contraseña - Medinet360",
+      html: `
+        <h1>Recuperación de Contraseña</h1>
+        <p>Has solicitado restablecer tu contraseña.</p>
+        <p>Haz clic en el siguiente enlace para continuar:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Restablecer Contraseña</a>
+        <p>Si no solicitaste esto, puedes ignorar este correo.</p>
+        <br />
+        <p>Saludos,</p>
+        <p><strong>El equipo de Medinet360</strong></p>
+      `,
+    });
+    console.log("📧 Correo de recuperación enviado a:", email);
+  } catch (error) {
+    console.error("❌ Error enviando correo de recuperación:", error);
+  }
+};
+
 module.exports = {
   sendAccountActivationEmail,
   sendAccountRejectionEmail,
   sendDoctorAccountCreationEmail,
   sendAssistantAccountCreationEmail,
+  sendPasswordResetEmail,
 };

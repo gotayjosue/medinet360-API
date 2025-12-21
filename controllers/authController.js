@@ -3,9 +3,12 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User.js");
 const Clinic = require("../models/Clinic.js");
 const { error } = require("console");
-const { 
-  sendDoctorAccountCreationEmail, 
-  sendAssistantAccountCreationEmail } = require("../utils/emailService");
+const crypto = require("crypto");
+const {
+  sendDoctorAccountCreationEmail,
+  sendAssistantAccountCreationEmail,
+  sendPasswordResetEmail
+} = require("../utils/emailService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
@@ -68,7 +71,7 @@ const register = async (req, res) => {
     // Enviar correo de creación de cuenta
     if (role === "assistant") {
       await sendAssistantAccountCreationEmail(user.email, user.name);
-    }else{
+    } else {
       await sendDoctorAccountCreationEmail(user.email, user.name);
     }
 
@@ -118,7 +121,7 @@ const getProfile = async (req, res) => {
 
 //Actualizar datos de usuario
 const updateProfile = async (req, res) => {
-  try{
+  try {
     const { name, lastName, email } = req.body;
     const clinicId = req.user.clinicId;
 
@@ -140,7 +143,7 @@ const updateProfile = async (req, res) => {
     }
 
     res.status(200).json(user);
-  }catch (error) {
+  } catch (error) {
     //Manejo de email duplicado
     if (error.code === 11000) {
       return res.status(400).json({ error: "El correo ya está en uso" });
@@ -149,6 +152,70 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 }
+
+
+
+
+// 🔹 RECUPERAR CONTRASEÑA (Solicitar enlace)
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "No existe un usuario con ese correo electrónico" });
+    }
+
+    // Generar token
+    const token = crypto.randomBytes(20).toString("hex");
+
+    // Guardar token y expiración (1 hora)
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
+    await user.save();
+
+    // Crear URL de restablecimiento (Ajustar dominio según entorno)
+    // Asumiendo que el frontend maneja la ruta /reset-password/:token
+    const resetUrl = `https://medinet360.netlify.app/reset-password/${token}`;
+
+    // Enviar correo
+    await sendPasswordResetEmail(user.email, resetUrl);
+
+    res.status(200).json({ message: "Correo de recuperación enviado exitosamente" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🔹 RESTABLECER CONTRASEÑA (Usar token)
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }, // Verificar que no haya expirado
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "El token es inválido o ha expirado" });
+    }
+
+    // Hashear nueva contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Actualizar usuario
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Contraseña restablecida exitosamente" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 
 // Logout
@@ -163,4 +230,4 @@ function logout(req, res) {
   });
 }
 
-module.exports = { login, register, getProfile, updateProfile, logout }
+module.exports = { login, register, getProfile, updateProfile, logout, forgotPassword, resetPassword }

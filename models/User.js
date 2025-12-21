@@ -28,6 +28,8 @@ const userSchema = new mongoose.Schema(
       editAppointment: { type: Boolean, default: false },
       deleteAppointment: { type: Boolean, default: false },
     },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
   },
   { timestamps: true }
 );
