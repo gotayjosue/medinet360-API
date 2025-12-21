@@ -18,7 +18,7 @@ router.put("/profile/:id", requireAuth, updateProfile);
 
 // Recuperación de contraseña
 router.post("/forgot-password", forgotPassword);
-router.post("/reset-password/:token", resetPassword);
+router.post("/reset-password/:token", validate.userValidationRules(), validate.check, resetPassword);
 
 // Logout (protected) - increment tokenVersion to invalidate existing JWTs
 router.get("/logout", requireAuth, logout);
