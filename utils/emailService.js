@@ -183,10 +183,38 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
   }
 };
 
+/**
+ * Envía un correo de verificación de cuenta.
+ * @param {string} email - Correo del destinatario
+ * @param {string} verificationUrl - URL para verificar la cuenta
+ */
+const sendVerificationEmail = async (email, verificationUrl) => {
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Verifica tu cuenta - Medinet360",
+      html: `
+        <h1>¡Bienvenido a Medinet360!</h1>
+        <p>Gracias por registrarte. Por favor verifica tu correo electrónico para activar tu cuenta.</p>
+        <p>Haz clic en el siguiente enlace:</p>
+        <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Verificar Correo</a>
+        <p>Si no te registraste en Medinet360, puedes ignorar este correo.</p>
+        <br />
+        <p>Saludos,</p>
+        <p><strong>El equipo de Medinet360</strong></p>
+      `,
+    });
+    console.log("📧 Correo de verificación enviado a:", email);
+  } catch (error) {
+    console.error("❌ Error enviando correo de verificación:", error);
+  }
+};
+
 module.exports = {
   sendAccountActivationEmail,
   sendAccountRejectionEmail,
   sendDoctorAccountCreationEmail,
   sendAssistantAccountCreationEmail,
   sendPasswordResetEmail,
+  sendVerificationEmail,
 };

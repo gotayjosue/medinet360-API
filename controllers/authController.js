@@ -7,7 +7,8 @@ const crypto = require("crypto");
 const {
   sendDoctorAccountCreationEmail,
   sendAssistantAccountCreationEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendVerificationEmail
 } = require("../utils/emailService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
@@ -26,6 +27,10 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     let assignedClinicId = clinicId;
     let userStatus = "active"; // Default
+    let isVerified = false; // Por defecto no verificado
+
+    // Generar token de verificación
+    const verificationToken = crypto.randomBytes(20).toString("hex");
 
     // Si es doctor: crea nueva clínica
     if (role === "doctor") {
@@ -61,6 +66,8 @@ const register = async (req, res) => {
       role,
       clinicId: assignedClinicId,
       status: userStatus,
+      isVerified,
+      verificationToken
     });
 
     // Si el usuario es doctor, actualizar clínica con adminId
@@ -68,14 +75,16 @@ const register = async (req, res) => {
       await Clinic.findByIdAndUpdate(assignedClinicId, { adminId: user._id });
     }
 
-    // Enviar correo de creación de cuenta
-    if (role === "assistant") {
-      await sendAssistantAccountCreationEmail(user.email, user.name);
-    } else {
-      await sendDoctorAccountCreationEmail(user.email, user.name);
-    }
+    // Enviar correo de creación de cuenta (OJO: Esto podría ser redundante con el de verificación, pero lo mantenemos por si acaso o lo condicionamos)
+    // Para simplificar, enviaremos SOLAMENTE el de verificación ahora,
+    // y el de "Bienvenida/Activación" cuando se verifique.
+    // O podemos enviar ambos. Vamos a priorizar la verificación.
 
-    res.status(201).json({ message: "Usuario registrado correctamente", user });
+    // URL de verificación
+    const verificationUrl = `https://medinet360.netlify.app/verify-email/${verificationToken}`;
+    await sendVerificationEmail(user.email, verificationUrl);
+
+    res.status(201).json({ message: "Usuario registrado. Por favor verifica tu correo electrónico." });
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -92,6 +101,11 @@ const login = async (req, res) => {
     // Verificar si la cuenta está pendiente
     if (user.status === "pending") {
       return res.status(403).json({ error: "Tu cuenta está pendiente de aprobación por el doctor." });
+    }
+
+    // Verificar si el correo está verificado
+    if (!user.isVerified) {
+      return res.status(401).json({ error: "Por favor verifica tu correo electrónico antes de iniciar sesión." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -214,6 +228,59 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// 🔹 VERIFICAR CORREO
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({ error: "Token de verificación inválido o expirado" });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    // Enviar correo de bienvenida/creación AHORA que está verificado (opcional, pero buena práctica)
+    if (user.role === "assistant") {
+      await sendAssistantAccountCreationEmail(user.email, user.name);
+    } else {
+      await sendDoctorAccountCreationEmail(user.email, user.name);
+    }
+
+    res.status(200).json({ message: "Correo verificado exitosamente" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ error: "Esta cuenta ya ha sido verificada" });
+    }
+
+    const verificationToken = crypto.randomBytes(20).toString("hex");
+    user.verificationToken = verificationToken;
+    await user.save();
+
+    const verificationUrl = `https://medinet360.netlify.app/verify-email/${verificationToken}`;
+    await sendVerificationEmail(user.email, verificationUrl);
+
+    res.status(200).json({ message: "Correo de verificación reenviado" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 // Logout
 function logout(req, res) {
@@ -227,4 +294,4 @@ function logout(req, res) {
   });
 }
 
-module.exports = { login, register, getProfile, updateProfile, logout, forgotPassword, resetPassword }
+module.exports = { login, register, getProfile, updateProfile, logout, forgotPassword, resetPassword, verifyEmail, resendVerification }

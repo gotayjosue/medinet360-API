@@ -1,5 +1,5 @@
 const express = require("express");
-const { register, login, getProfile, logout, updateProfile, forgotPassword, resetPassword } = require("../controllers/authController.js");
+const { register, login, getProfile, logout, updateProfile, forgotPassword, resetPassword, verifyEmail, resendVerification } = require("../controllers/authController.js");
 const { requireAuth } = require("../middleware/requireAuth.js");
 const validate = require("../middleware/userValidate.js");
 const router = express.Router();
@@ -19,6 +19,10 @@ router.put("/profile/:id", requireAuth, updateProfile);
 // Recuperación de contraseña
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", validate.userValidationRules(), validate.check, resetPassword);
+
+// Verificación de email
+router.get("/verify-email/:token", verifyEmail);
+router.post("/resend-verification", resendVerification);
 
 // Logout (protected) - increment tokenVersion to invalidate existing JWTs
 router.get("/logout", requireAuth, logout);
