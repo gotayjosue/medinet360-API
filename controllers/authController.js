@@ -153,9 +153,6 @@ const updateProfile = async (req, res) => {
   }
 }
 
-
-
-
 // 🔹 RECUPERAR CONTRASEÑA (Solicitar enlace)
 const forgotPassword = async (req, res) => {
   try {
