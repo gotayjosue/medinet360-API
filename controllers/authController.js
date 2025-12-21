@@ -176,7 +176,7 @@ const forgotPassword = async (req, res) => {
 
     // Crear URL de restablecimiento (Ajustar dominio según entorno)
     // Asumiendo que el frontend maneja la ruta /reset-password/:token
-    const resetUrl = `https://medinet360.netlify.app/resetPassword/${token}`;
+    const resetUrl = `https://medinet360.netlify.app/reset-password/${token}`;
 
     // Enviar correo
     await sendPasswordResetEmail(user.email, resetUrl);
