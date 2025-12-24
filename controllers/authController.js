@@ -81,7 +81,7 @@ const register = async (req, res) => {
     // O podemos enviar ambos. Vamos a priorizar la verificación.
 
     // URL de verificación
-    const verificationUrl = `https://medinet360.netlify.app/verify-email/${verificationToken}`;
+    const verificationUrl = `https://medinet360.com/verify-email/${verificationToken}`;
     await sendVerificationEmail(user.email, verificationUrl);
 
     res.status(201).json({ message: "Usuario registrado. Por favor verifica tu correo electrónico." });
@@ -187,7 +187,7 @@ const forgotPassword = async (req, res) => {
 
     // Crear URL de restablecimiento (Ajustar dominio según entorno)
     // Asumiendo que el frontend maneja la ruta /reset-password/:token
-    const resetUrl = `https://medinet360.netlify.app/reset-password/${token}`;
+    const resetUrl = `https://medinet360.com/reset-password/${token}`;
 
     // Enviar correo
     await sendPasswordResetEmail(user.email, resetUrl);
@@ -272,7 +272,7 @@ const resendVerification = async (req, res) => {
     user.verificationToken = verificationToken;
     await user.save();
 
-    const verificationUrl = `https://medinet360.netlify.app/verify-email/${verificationToken}`;
+    const verificationUrl = `https://medinet360.com/verify-email/${verificationToken}`;
     await sendVerificationEmail(user.email, verificationUrl);
 
     res.status(200).json({ message: "Correo de verificación reenviado" });
