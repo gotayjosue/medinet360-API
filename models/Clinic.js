@@ -16,6 +16,11 @@ const clinicSchema = new mongoose.Schema(
         options: [{ type: String }],
       }
     ],
+    paddleCustomerId: { type: String },
+    paddleSubscriptionId: { type: String },
+    subscriptionStatus: { type: String, default: "active" }, // trialing, active, past_due, canceled, paused
+    plan: { type: String, default: "free" },
+    subscriptionEndDate: { type: Date },
   },
   { timestamps: true }
 );

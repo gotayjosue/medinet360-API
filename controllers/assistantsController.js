@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Clinic = require("../models/Clinic");
 const { sendAccountActivationEmail, sendAccountRejectionEmail } = require("../utils/emailService");
 
 // Obtener asistentes pendientes de aprobación para la clínica del doctor
@@ -52,6 +53,33 @@ const approveAssistant = async (req, res) => {
 
     if (assistant.status === "active") {
       return res.status(400).json({ error: "El asistente ya está activo." });
+    }
+
+    // VERIFICAR LÍMITES DEL PLAN
+    const clinic = await Clinic.findById(doctor.clinicId);
+    const isPlanActive = clinic.subscriptionStatus === 'active' || clinic.subscriptionStatus === 'trialing';
+    const currentPlan = (isPlanActive) ? clinic.plan : 'free';
+
+    // Free: 0 assistants (según imagen 'Manage up to 5 patients' pero NO menciona assistants. Pro dice 'Up to 2'. Plus 'Unlimited')
+    // Asumimos Free = 0 asistentes.
+
+    let limit = 0;
+    if (currentPlan === 'clinic_pro') limit = 2;
+    if (currentPlan === 'clinic_plus') limit = 9999;
+
+    if (currentPlan === 'free') {
+      return res.status(403).json({ error: "El plan gratuito no permite agregar asistentes. Actualiza a Pro o Plus." });
+    }
+
+    // Contar activos
+    const currentAssistants = await User.countDocuments({
+      clinicId: doctor.clinicId,
+      role: "assistant",
+      status: "active"
+    });
+
+    if (currentAssistants >= limit) {
+      return res.status(403).json({ error: `Tu plan (${currentPlan}) solo permite ${limit} asistentes. Actualiza para añadir más.` });
     }
 
     // Actualizar estado

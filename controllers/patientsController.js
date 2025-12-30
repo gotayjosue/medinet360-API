@@ -1,4 +1,5 @@
 const Patient = require("../models/Patient.js");
+const Clinic = require("../models/Clinic.js");
 
 // 🔹 Obtener todos los pacientes de la clínica del usuario
 const getPatients = async (req, res) => {
@@ -42,6 +43,27 @@ const calculateAge = (birthday) => {
 const createPatient = async (req, res) => {
   try {
     const { name, lastName, birthday, email, phone, gender, notes, customFields } = req.body;
+
+    // Verificar Plan
+    const clinic = await Clinic.findById(req.user.clinicId);
+
+    // Si no tiene plan o es 'free' y ya tiene 5 pacientes
+    // Consideramos "activo" si status es 'active' o 'trialing' Y la fecha no ha expirado (si es exigente)
+    // Para simplificar, confiamos en 'plan'. 
+    // Plan 'free' = limite 5.
+
+    const isPlanActive = clinic.subscriptionStatus === 'active' || clinic.subscriptionStatus === 'trialing';
+    // Nota: Aunque el plan sea 'clinic_pro', si el status es 'past_due' o 'canceled' (y expiró), 
+    // deberíamos degradar lógica. Pero por ahora chequeamos el nombre del plan guardado.
+
+    const currentPlan = (isPlanActive) ? clinic.plan : 'free';
+
+    if (currentPlan === 'free') {
+      const count = await Patient.countDocuments({ clinicId: req.user.clinicId });
+      if (count >= 5) {
+        return res.status(403).json({ error: "Has alcanzado el límite de 5 pacientes del plan gratuito. Actualiza tu plan para añadir más." });
+      }
+    }
 
     //Calculating age before creating patient object
     const age = calculateAge(birthday)

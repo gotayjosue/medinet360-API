@@ -218,3 +218,82 @@ module.exports = {
   sendPasswordResetEmail,
   sendVerificationEmail,
 };
+
+/**
+ * Envía notificacion de inicio de trial.
+ */
+const sendTrialStartedEmail = async (email, name, planName) => {
+  try {
+    const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
+    await sendEmail({
+      to: email,
+      subject: `Comienzo de tu prueba gratuita - Medinet360`,
+      html: `
+        <h1>¡Hola ${name}!</h1>
+        <p>Has comenzado tu prueba gratuita de 7 días del plan <strong>${planName}</strong>.</p>
+        <p>Disfruta de todas las funcionalidades premium sin cargo hasta que termine el periodo de prueba.</p>
+        <br/>
+         <a href="${dashboardUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Ir al Dashboard</a>
+      `,
+    });
+  } catch (err) {
+    console.error("❌ Error enviando correo trial started:", err);
+  }
+};
+
+/**
+ * Envía notificacion de suscripción activa (pago exitoso).
+ */
+const sendSubscriptionActiveEmail = async (email, name, planName) => {
+  try {
+    const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
+    await sendEmail({
+      to: email,
+      subject: `Suscripción Activada - Medinet360`,
+      html: `
+        <h1>¡Gracias ${name}!</h1>
+        <p>Tu suscripción al plan <strong>${planName}</strong> está ahora activa.</p>
+        <p>Se ha procesado el pago correctamente.</p>
+        <br/>
+         <a href="${dashboardUrl}" style="display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Ir al Dashboard</a>
+      `,
+    });
+  } catch (err) {
+    console.error("❌ Error enviando correo subscription active:", err);
+  }
+};
+
+/**
+ * Envía notificacion de cancelación.
+ */
+const sendSubscriptionCancelledEmail = async (email, name, endDate) => {
+  try {
+    // Formatear fecha legible
+    const dateStr = endDate ? new Date(endDate).toLocaleDateString() : 'el final del periodo';
+
+    await sendEmail({
+      to: email,
+      subject: `Confirmación de Cancelación - Medinet360`,
+      html: `
+        <h1>Hola ${name},</h1>
+        <p>Hemos recibido tu solicitud de cancelación.</p>
+        <p>Tu acceso al plan premium continuará hasta <strong>${dateStr}</strong>.</p>
+        <p>Después de esa fecha, tu cuenta volverá al plan gratuito.</p>
+      `,
+    });
+  } catch (err) {
+    console.error("❌ Error enviando correo cancelación:", err);
+  }
+};
+
+module.exports = {
+  sendAccountActivationEmail,
+  sendAccountRejectionEmail,
+  sendDoctorAccountCreationEmail,
+  sendAssistantAccountCreationEmail,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendTrialStartedEmail,
+  sendSubscriptionActiveEmail,
+  sendSubscriptionCancelledEmail
+};

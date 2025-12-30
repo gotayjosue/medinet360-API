@@ -14,6 +14,7 @@ const patientsRoutes = require("./routes/patientsRoutes.js");
 const appointmentsRoutes = require("./routes/appointmentsRoutes.js");
 const clinicsRoutes = require("./routes/clinicsRoutes.js");
 const assistantRoutes = require("./routes/assistantRoutes.js");
+const paddleRoutes = require("./routes/paddleRoutes.js");
 
 // Configuración
 app.use(session({
@@ -23,7 +24,16 @@ app.use(session({
 }));
 
 app.use(express.static('public'));
-app.use(express.json());
+
+// Modificar express.json para guardar rawBody para webhooks
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/paddle/webhook')) {
+      req.rawBody = buf.toString();
+    }
+  }
+}));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 app.use(flash());
@@ -39,7 +49,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'paddle-signature'], // Allow paddle-signature
   })
 );
 
@@ -62,6 +72,7 @@ app.use("/api/patients", patientsRoutes);
 app.use("/api/appointments", appointmentsRoutes);
 app.use("/api/clinic", clinicsRoutes);
 app.use("/api/assistants", assistantRoutes);
+app.use("/api/paddle", paddleRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server on http://localhost:${PORT}`));
