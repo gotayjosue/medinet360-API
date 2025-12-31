@@ -54,7 +54,7 @@ exports.handleWebhook = async (req, res) => {
         const event = paddle.webhooks.unmarshal(bodyToCheck, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
         const eventData = event.data;
 
-        console.log(`🔔 Webhook recibido: ${event.eventType}`);
+        console.log(`🔔 Webhook recibido: ${event.event_type}`);
 
         switch (event.eventType) {
             case 'subscription.created':
@@ -70,7 +70,7 @@ exports.handleWebhook = async (req, res) => {
                 await handleSubscriptionActivated(eventData); // Trial convertido a paid
                 break;
             default:
-                console.log(`Evento ${event.eventType} no manejado explícitamente.`);
+                console.log(`Evento ${event.event_type} no manejado explícitamente.`);
         }
 
         res.status(200).send('Webhook processed');
