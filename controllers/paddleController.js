@@ -84,7 +84,7 @@ async function handleSubscriptionCreated(sub) {
     // Buscar clínica por email del cliente (Paddle customer email)
     // O usar el `custom_data` si lo pasamos desde el frontend (recomendado).
     // Asumamos que el frontend pasa { clinicId: '...' } en custom_data.
-    let clinicId = sub.customData?.clinicId;
+    let clinicId = sub.custom_data?.clinicId;
     let userEmail = null;
 
     // Si no hay customData, intentamos buscar el usuario dueño por email
