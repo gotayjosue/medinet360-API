@@ -61,7 +61,11 @@ exports.handleWebhook = async (req, res) => {
                 await handleSubscriptionActivated(eventData); // Trial convertido a paid
                 break;
             default:
-                console.log(`Evento ${event.event_type} no manejado explícitamente.`);
+                if (event.eventType.startsWith('transaction.') || event.eventType.startsWith('address.') || event.eventType.startsWith('customer.') || event.eventType.startsWith('business.')) {
+                    //console.log(`Evento ${event.eventType} ignorado.`);
+                } else {
+                    console.log(`Evento ${event.eventType} no manejado explícitamente.`);
+                }
         }
 
         res.status(200).send('Webhook processed');
@@ -75,7 +79,7 @@ async function handleSubscriptionCreated(sub) {
     // Buscar clínica por email del cliente (Paddle customer email)
     // O usar el `custom_data` si lo pasamos desde el frontend (recomendado).
     // Asumamos que el frontend pasa { clinicId: '...' } en custom_data.
-    let clinicId = sub.custom_data?.clinicId;
+    let clinicId = sub.customData?.clinicId;
     let userEmail = null;
 
     // Si no hay customData, intentamos buscar el usuario dueño por email
