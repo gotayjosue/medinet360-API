@@ -40,21 +40,21 @@ exports.handleWebhook = async (req, res) => {
     }
 
     try {
-        // Validar y parsear el evento. req.body DEBE ser string o buffer si no se usó express.json() antes,
-        // o el objeto si el SDK lo soporta. El SDK espera (body, secret, signature).
-        // Si usaste express.json(), req.body es objeto. El SDK de Node suele manejar objetos si vienen de JSON,
-        // pero para verificar firma se prefiere el raw body. 
-        // Asumiremos que req.body es el objeto JSON ya parseado por express, PERO el SDK podría fallar en verificar firma.
-        // *IMPORTANTE*: En server.js configuraremos para que esta ruta reciba raw body o usaremos un truco.
-        // Si falla, el usuario tendrá que ajustar server.js para raw body.
-
-        // Usamos rawBody si existe (configurado en server.js), sino req.body (y cruzamos los dedos si el SDK lo acepta)
         const bodyToCheck = req.rawBody || req.body;
+        console.log('Webhook Debug:');
+        console.log('Headers:', JSON.stringify(req.headers, null, 2));
+        console.log('req.rawBody exists:', !!req.rawBody, 'Type:', typeof req.rawBody, 'Length:', req.rawBody ? req.rawBody.length : 'N/A');
+        console.log('bodyToCheck Type:', typeof bodyToCheck);
+        console.log('Signature:', signature);
 
         const event = paddle.webhooks.unmarshal(bodyToCheck, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
+
         // Debug logging
-        console.log('Event keys:', Object.keys(event));
-        console.log('Event object:', JSON.stringify(event, null, 2));
+        console.log('Event variable:', event);
+        console.log('Event constructor:', event ? event.constructor.name : 'N/A');
+        console.log('Event keys:', Object.keys(event || {}));
+        console.log('Event prototype keys:', Object.getOwnPropertyNames(Object.getPrototypeOf(event || {})));
+        console.log('Event serialized:', JSON.stringify(event, null, 2));
 
         const eventData = event.data;
 
