@@ -41,25 +41,11 @@ exports.handleWebhook = async (req, res) => {
 
     try {
         const bodyToCheck = req.rawBody || req.body;
-        console.log('Webhook Debug:');
-        console.log('Headers:', JSON.stringify(req.headers, null, 2));
-        console.log('req.rawBody exists:', !!req.rawBody, 'Type:', typeof req.rawBody, 'Length:', req.rawBody ? req.rawBody.length : 'N/A');
-        console.log('bodyToCheck Type:', typeof bodyToCheck);
-        console.log('Signature:', signature);
 
-        const event = paddle.webhooks.unmarshal(bodyToCheck, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
-
-        // Debug logging
-        console.log('Event variable:', event);
-        console.log('Event constructor:', event ? event.constructor.name : 'N/A');
-        console.log('Event keys:', Object.keys(event || {}));
-        console.log('Event prototype keys:', Object.getOwnPropertyNames(Object.getPrototypeOf(event || {})));
-        console.log('Event serialized:', JSON.stringify(event, null, 2));
-
+        const event = await paddle.webhooks.unmarshal(bodyToCheck, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
         const eventData = event.data;
 
-        console.log(`🔔 Webhook recibido logic type: ${event.eventType}`);
-        console.log(`🔔 Webhook recibido raw type: ${event.event_type}`);
+        console.log(`🔔 Webhook recibido: ${event.eventType}`);
 
         switch (event.eventType) {
             case 'subscription.created':
