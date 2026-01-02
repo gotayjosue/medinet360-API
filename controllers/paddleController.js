@@ -198,7 +198,8 @@ exports.createPortalSession = async (req, res) => {
         }
 
         const session = await paddle.customerPortalSessions.create({
-            customerIds: [clinic.paddleCustomerId]
+            customerIds: [clinic.paddleCustomerId],
+            returnUrl: process.env.FRONTEND_URL
         });
 
         // session.urls.general es la URL de acceso
