@@ -10,10 +10,11 @@ const getClinicById = async (req, res) => {
 
     // AUTO-UPDATE: Si el plan guardado es distinto al que dicta el helper (ej: expiró)
     const activePlan = getActivePlan(clinic);
-    if (activePlan === 'free' && clinic.plan !== 'free') {
+    if (activePlan === 'free' && (clinic.plan !== 'free' || clinic.subscriptionStatus !== 'active')) {
       clinic.plan = 'free';
+      clinic.subscriptionStatus = 'active';
       await clinic.save();
-      console.log(`🧹 Auto-update: Plan de clínica "${clinic.name}" (${clinic._id}) corregido a free por expiración.`);
+      console.log(`🧹 Auto-update: Plan y estado de clínica "${clinic.name}" (${clinic._id}) corregidos a free/active por expiración.`);
     }
 
     res.status(200).json(clinic);

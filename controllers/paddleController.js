@@ -223,7 +223,7 @@ async function handleSubscriptionCanceled(sub) {
     const isExpired = !endDate || new Date(endDate) <= new Date();
 
     const updateData = {
-        subscriptionStatus: 'canceled',
+        subscriptionStatus: isExpired ? 'active' : 'canceled',
         subscriptionEndDate: endDate
     };
 
