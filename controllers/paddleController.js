@@ -1,6 +1,7 @@
 const { Paddle, Environment } = require('@paddle/paddle-node-sdk');
 const Clinic = require('../models/Clinic');
 const User = require('../models/User'); // Para obtener el email del admin
+const TrialFingerprint = require('../models/TrialFingerprint');
 const {
     sendTrialStartedEmail,
     sendSubscriptionActiveEmail,
@@ -76,16 +77,43 @@ exports.handleWebhook = async (req, res) => {
 };
 
 async function handleSubscriptionCreated(sub) {
-    // Buscar clínica por email del cliente (Paddle customer email)
-    // O usar el `custom_data` si lo pasamos desde el frontend (recomendado).
-    // Asumamos que el frontend pasa { clinicId: '...' } en custom_data.
+    // ---------------------------------------------------------
+    // 🛡️ SEGURIDAD: PREVENCIÓN DE FRAUDE EN TRIALS (1 por tarjeta)
+    // ---------------------------------------------------------
+    let fingerprint = sub.paymentMethod?.card?.fingerprint;
+
+    // Si no viene en el webhook, intentamos obtener el método de pago desde la API
+    if (!fingerprint && sub.paymentMethodId) {
+        try {
+            const paymentMethod = await paddle.paymentMethods.get(sub.customerId, sub.paymentMethodId);
+            fingerprint = paymentMethod.card?.fingerprint;
+        } catch (e) {
+            console.error("❌ Error recuperando método de pago para fingerprint:", e.message);
+        }
+    }
+
+    // Si es un Trial, validamos que la tarjeta no haya sido usada antes
+    if (sub.status === 'trialing') {
+        if (!fingerprint) {
+            console.warn("⚠️ Suscripción de trial sin fingerprint detectable. Procediendo con cautela...");
+        } else {
+            const fingerprintExists = await TrialFingerprint.findOne({ cardFingerprint: fingerprint });
+            if (fingerprintExists) {
+                console.error(`🚨 INTENTO DE FRAUDE: Tarjeta ${fingerprint} ya usó un trial. Cancelando suscripción ${sub.id}`);
+                await paddle.subscriptions.cancel(sub.id, { effectiveAt: 'immediately' });
+                // No actualizamos la clínica ni mandamos email de bienvenida
+                return;
+            }
+        }
+    }
+
+    // ---------------------------------------------------------
+    // LÓGICA DE VINCULACIÓN DE CLÍNICA
+    // ---------------------------------------------------------
     let clinicId = sub.customData?.clinicId;
     let userEmail = null;
 
-    // Si no hay customData, intentamos buscar el usuario dueño por email
     if (!clinicId) {
-        // Esto requiere una llamada a la API de Paddle para obtener el Customer completo si `sub` no tiene el email directo
-        // `sub` tiene `customerId`.
         try {
             const customer = await paddle.customers.get(sub.customerId);
             userEmail = customer.email;
@@ -101,17 +129,30 @@ async function handleSubscriptionCreated(sub) {
         return;
     }
 
-    const priceId = sub.items[0]?.price?.id; // Asumimos 1 item
+    // 🧠 Guardar registro del fingerprint para esta clínica (si existe)
+    if (fingerprint) {
+        await TrialFingerprint.findOneAndUpdate(
+            { cardFingerprint: fingerprint },
+            {
+                cardFingerprint: fingerprint,
+                clinicId: clinicId,
+                subscriptionId: sub.id,
+                firstUsedAt: new Date()
+            },
+            { upsert: true, new: true }
+        );
+    }
+
+    const priceId = sub.items[0]?.price?.id;
     const planName = getPlanNameFromPriceId(priceId);
     const planSlug = getPlanSlugFromPriceId(priceId);
 
-    // Buscar admin nombre para email
     if (!userEmail) {
         const clinic = await Clinic.findById(clinicId).populate('adminId');
         if (clinic && clinic.adminId) userEmail = clinic.adminId.email;
     }
 
-    // Actualizar DB
+    // Actualizar DB de la clínica
     await Clinic.findByIdAndUpdate(clinicId, {
         paddleCustomerId: sub.customerId,
         paddleSubscriptionId: sub.id,
