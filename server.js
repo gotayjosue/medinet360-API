@@ -15,6 +15,7 @@ const appointmentsRoutes = require("./routes/appointmentsRoutes.js");
 const clinicsRoutes = require("./routes/clinicsRoutes.js");
 const assistantRoutes = require("./routes/assistantRoutes.js");
 const paddleRoutes = require("./routes/paddleRoutes.js");
+const reportsRoutes = require("./routes/reportsRoutes.js");
 
 // Configuración
 app.use(session({
@@ -73,6 +74,7 @@ app.use("/api/appointments", appointmentsRoutes);
 app.use("/api/clinic", clinicsRoutes);
 app.use("/api/assistants", assistantRoutes);
 app.use("/api/paddle", paddleRoutes);
+app.use("/api/reports", reportsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server on http://localhost:${PORT}`));
