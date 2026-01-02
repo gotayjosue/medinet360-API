@@ -197,7 +197,7 @@ exports.createPortalSession = async (req, res) => {
             return res.status(400).json({ error: "No hay una suscripción activa vinculada a Paddle." });
         }
 
-        const session = await paddle.customerPortalSessions.create({
+        const session = await paddle.customerPortalSessions.create(clinic.paddleCustomerId, {
             customerIds: [clinic.paddleCustomerId],
             returnUrl: process.env.FRONTEND_URL
         });
