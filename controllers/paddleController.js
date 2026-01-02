@@ -167,15 +167,16 @@ async function handleSubscriptionActivated(sub) {
 }
 
 async function handleSubscriptionCanceled(sub) {
-    // Paddle manda esto cuando se *programa* la cancelación o se cancela inmediatamente?
-    // Normalmente subscription.canceled significa "se ha cancelado y no renovará".
-    // Guardamos la fecha fin.
+    // Cuando se cancela una suscripción, marcamos el estado como 'canceled'
+    // pero NO cambiamos el campo 'plan'. El usuario mantendrá acceso a las
+    // funcionalidades de su plan hasta que expire subscriptionEndDate.
+    // La función helper getActivePlan() determinará el plan efectivo.
 
     const clinic = await Clinic.findOneAndUpdate(
         { paddleSubscriptionId: sub.id },
         {
-            subscriptionStatus: 'canceled', // O mantener 'active' si queremos que siga accediendo hasta la fecha?
-            // Mejor actualizar status y confiar en subscriptionEndDate para el acceso
+            subscriptionStatus: 'canceled',
+            // Guardar la fecha hasta la cual el usuario tiene acceso pagado
             subscriptionEndDate: sub.scheduledChange?.effectiveAt || sub.currentBillingPeriod?.endsAt
         },
         { new: true }
@@ -201,9 +202,11 @@ exports.createPortalSession = async (req, res) => {
             customerIds: [clinic.paddleCustomerId],
             returnUrl: process.env.FRONTEND_URL
         });
+        console.log(customerIds);
 
         // session.urls.general es la URL de acceso
         res.json({ url: session.urls.general });
+        console.log(session.urls.general);
 
     } catch (error) {
         console.error("Error creando sesión de portal:", error);

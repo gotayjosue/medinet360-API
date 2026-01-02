@@ -5,6 +5,7 @@ const PDFDocument = require('pdfkit');
 const { createObjectCsvWriter } = require('csv-writer');
 const fs = require('fs');
 const path = require('path');
+const { getActivePlan } = require('../utils/planHelper');
 
 // Helper: Check if user's clinic has Clinic Plus plan
 async function checkClinicPlusPlan(userId) {
@@ -19,8 +20,10 @@ async function checkClinicPlusPlan(userId) {
         throw new Error('Clínica no encontrada');
     }
 
-    // Check if plan is 'clinic_plus'
-    if (clinic.plan !== 'clinic_plus') {
+    // Usar helper para determinar plan activo (considera cancelaciones con período de gracia)
+    const activePlan = getActivePlan(clinic);
+
+    if (activePlan !== 'clinic_plus') {
         const error = new Error('Esta función requiere el plan Clinic Plus');
         error.statusCode = 403;
         throw error;

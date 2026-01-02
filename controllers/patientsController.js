@@ -1,5 +1,6 @@
 const Patient = require("../models/Patient.js");
 const Clinic = require("../models/Clinic.js");
+const { getActivePlan } = require("../utils/planHelper.js");
 
 // 🔹 Obtener todos los pacientes de la clínica del usuario
 const getPatients = async (req, res) => {
@@ -47,16 +48,10 @@ const createPatient = async (req, res) => {
     // Verificar Plan
     const clinic = await Clinic.findById(req.user.clinicId);
 
-    // Si no tiene plan o es 'free' y ya tiene 5 pacientes
-    // Consideramos "activo" si status es 'active' o 'trialing' Y la fecha no ha expirado (si es exigente)
-    // Para simplificar, confiamos en 'plan'. 
-    // Plan 'free' = limite 5.
-
-    const isPlanActive = clinic.subscriptionStatus === 'active' || clinic.subscriptionStatus === 'trialing';
-    // Nota: Aunque el plan sea 'clinic_pro', si el status es 'past_due' o 'canceled' (y expiró), 
-    // deberíamos degradar lógica. Pero por ahora chequeamos el nombre del plan guardado.
-
-    const currentPlan = (isPlanActive) ? clinic.plan : 'free';
+    // Usar helper para determinar el plan activo considerando:
+    // - Estado de suscripción (active, trialing, canceled)
+    // - Fecha de expiración (si está cancelado pero aún dentro del período pagado)
+    const currentPlan = getActivePlan(clinic);
 
     if (currentPlan === 'free') {
       const count = await Patient.countDocuments({ clinicId: req.user.clinicId });

@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Clinic = require("../models/Clinic");
 const { sendAccountActivationEmail, sendAccountRejectionEmail } = require("../utils/emailService");
+const { getActivePlan } = require("../utils/planHelper");
 
 // Obtener asistentes pendientes de aprobación para la clínica del doctor
 const getPendingAssistants = async (req, res) => {
@@ -57,8 +58,8 @@ const approveAssistant = async (req, res) => {
 
     // VERIFICAR LÍMITES DEL PLAN
     const clinic = await Clinic.findById(doctor.clinicId);
-    const isPlanActive = clinic.subscriptionStatus === 'active' || clinic.subscriptionStatus === 'trialing';
-    const currentPlan = (isPlanActive) ? clinic.plan : 'free';
+    // Usar helper para determinar plan activo (considera cancelaciones con período de gracia)
+    const currentPlan = getActivePlan(clinic);
 
     // Free: 0 assistants (según imagen 'Manage up to 5 patients' pero NO menciona assistants. Pro dice 'Up to 2'. Plus 'Unlimited')
     // Asumimos Free = 0 asistentes.
