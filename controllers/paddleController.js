@@ -216,18 +216,25 @@ async function handleSubscriptionActivated(sub) {
 }
 
 async function handleSubscriptionCanceled(sub) {
-    // Cuando se cancela una suscripción, marcamos el estado como 'canceled'
-    // pero NO cambiamos el campo 'plan'. El usuario mantendrá acceso a las
-    // funcionalidades de su plan hasta que expire subscriptionEndDate.
-    // La función helper getActivePlan() determinará el plan efectivo.
+    // Calcular la fecha de fin
+    const endDate = sub.scheduledChange?.effectiveAt || sub.currentBillingPeriod?.endsAt;
+
+    // Verificar si ya expiró (o si no tiene fecha, lo cual indica cancelación inmediata)
+    const isExpired = !endDate || new Date(endDate) <= new Date();
+
+    const updateData = {
+        subscriptionStatus: 'canceled',
+        subscriptionEndDate: endDate
+    };
+
+    // Si ya expiró, cambiamos el plan a 'free' en la base de datos de una vez
+    if (isExpired) {
+        updateData.plan = 'free';
+    }
 
     const clinic = await Clinic.findOneAndUpdate(
         { paddleSubscriptionId: sub.id },
-        {
-            subscriptionStatus: 'canceled',
-            // Guardar la fecha hasta la cual el usuario tiene acceso pagado
-            subscriptionEndDate: sub.scheduledChange?.effectiveAt || sub.currentBillingPeriod?.endsAt
-        },
+        updateData,
         { new: true }
     ).populate('adminId');
 
