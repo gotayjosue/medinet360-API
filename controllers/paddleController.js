@@ -194,22 +194,32 @@ exports.createPortalSession = async (req, res) => {
         const user = await User.findById(userId);
         const clinic = await Clinic.findById(user.clinicId);
 
+        console.log('🔍 Datos de la clínica:', {
+            clinicId: clinic?._id,
+            paddleCustomerId: clinic?.paddleCustomerId,
+            paddleSubscriptionId: clinic?.paddleSubscriptionId
+        });
+
         if (!clinic || !clinic.paddleCustomerId) {
             return res.status(400).json({ error: "No hay una suscripción activa vinculada a Paddle." });
         }
 
-        const session = await paddle.customerPortalSessions.create(clinic.paddleCustomerId, {
-            customerIds: [clinic.paddleCustomerId],
-            returnUrl: process.env.FRONTEND_URL
-        });
-        console.log(customerIds);
+        // Crear sesión del portal del cliente
+        // Nota: El primer parámetro es el customerId, NO necesitas pasarlo en options
+        const session = await paddle.customerPortalSessions.create(clinic.paddleCustomerId);
 
-        // session.urls.general es la URL de acceso
-        res.json({ url: session.urls.general });
-        console.log(session.urls.general);
+        console.log('✅ Sesión del portal creada:', {
+            customerId: clinic.paddleCustomerId,
+            portalUrl: session.urls[0]
+        });
+
+        // session.urls es un array, tomar la primera URL
+        const portalUrl = session.urls[0];
+
+        res.json({ url: portalUrl });
 
     } catch (error) {
-        console.error("Error creando sesión de portal:", error);
+        console.error("❌ Error creando sesión de portal:", error);
         res.status(500).json({ error: "Error generando el enlace del portal." });
     }
 };
