@@ -37,16 +37,25 @@ exports.handleWebhook = async (req, res) => {
     const signature = req.headers['paddle-signature'];
 
     if (!signature) {
+        console.warn('⚠️ Webhook recibido sin firma');
         return res.status(401).send('No signature provided');
     }
 
     try {
-        const bodyToCheck = req.rawBody || req.body;
+        // IMPORTANTE: Paddle requiere el body RAW (string) para verificar la firma
+        const bodyToCheck = req.rawBody;
+
+        if (!bodyToCheck) {
+            console.error('❌ Error: no se encontró req.rawBody. Revisa la configuración de express.json en server.js');
+            // Intentar con JSON.stringify como fallback desesperado, pero probablemente fallará la firma
+            const fallbackBody = JSON.stringify(req.body);
+            await paddle.webhooks.unmarshal(fallbackBody, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
+        }
 
         const event = await paddle.webhooks.unmarshal(bodyToCheck, process.env.PADDLE_WEBHOOK_SECRET_KEY, signature);
         const eventData = event.data;
 
-        console.log(`🔔 Webhook recibido: ${event.eventType}`);
+        console.log(`🔔 Webhook verificado: ${event.eventType}`);
 
         switch (event.eventType) {
             case 'subscription.created':
@@ -59,24 +68,23 @@ exports.handleWebhook = async (req, res) => {
                 await handleSubscriptionCanceled(eventData);
                 break;
             case 'subscription.activated':
-                await handleSubscriptionActivated(eventData); // Trial convertido a paid
+                await handleSubscriptionActivated(eventData);
                 break;
             default:
-                if (event.eventType.startsWith('transaction.') || event.eventType.startsWith('address.') || event.eventType.startsWith('customer.') || event.eventType.startsWith('business.')) {
-                    //console.log(`Evento ${event.eventType} ignorado.`);
-                } else {
-                    console.log(`Evento ${event.eventType} no manejado explícitamente.`);
-                }
+                // Ignorar el resto de eventos comunes
+                break;
         }
 
         res.status(200).send('Webhook processed');
     } catch (error) {
-        console.error('❌ Error processing webhook:', error);
-        res.status(500).send('Error processing webhook');
+        console.error('❌ Error verificando firma de Paddle:', error.message);
+        // Si falló la firma, es posible que el body haya sido modificado por un middleware
+        res.status(400).send('Signature verification failed');
     }
 };
 
 async function handleSubscriptionCreated(sub) {
+    console.log(`🚀 Procesando handleSubscriptionCreated para: ${sub.id} (Status: ${sub.status})`);
     // ---------------------------------------------------------
     // 🛡️ SEGURIDAD: PREVENCIÓN DE FRAUDE EN TRIALS (1 por tarjeta)
     // ---------------------------------------------------------

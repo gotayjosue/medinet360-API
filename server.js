@@ -26,10 +26,11 @@ app.use(session({
 
 app.use(express.static('public'));
 
-// Modificar express.json para guardar rawBody para webhooks
+// Modificar express.json para guardar rawBody para webhooks de Paddle
 app.use(express.json({
   verify: (req, res, buf) => {
-    if (req.originalUrl && req.originalUrl.startsWith('/api/paddle/webhook')) {
+    // Capturar el body crudo para la verificación de firmas de Paddle
+    if (req.originalUrl && req.originalUrl.includes('/api/paddle/webhook')) {
       req.rawBody = buf.toString();
     }
   }
