@@ -11,9 +11,13 @@ const {
 // Inicializar Paddle
 // Nota: Environment.sandbox para pruebas, production para live. 
 // Idealmente controlar esto con una variable de entorno NODE_ENV o PADDLE_ENV
+const isPaddleProd = process.env.PADDLE_ENV === 'production';
+
 const paddle = new Paddle(process.env.PADDLE_API_KEY, {
-    environment: process.env.NODE_ENV === 'production' ? Environment.production : Environment.sandbox
-});
+    environment: isPaddleProd
+        ? Environment.production
+        : Environment.sandbox
+})
 
 // Map de Price IDs a Nombres de Plan (Para guardar en DB)
 const getPlanNameFromPriceId = (priceId) => {
