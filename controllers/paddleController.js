@@ -270,13 +270,10 @@ exports.createPortalSession = async (req, res) => {
 
         console.log('✅ Sesión del portal creada:', {
             customerId: clinic.paddleCustomerId,
-            portalUrl: session.urls[0]
+            portalUrl: session.url
         });
 
-        // session.urls es un array, tomar la primera URL
-        const portalUrl = session.urls[0];
-
-        res.json({ url: portalUrl });
+        res.json({ url: session.url });
 
     } catch (error) {
         console.error("❌ Error creando sesión de portal:", error);
