@@ -75,7 +75,7 @@ exports.handleWebhook = async (req, res) => {
                 await handleSubscriptionActivated(eventData);
                 break;
             default:
-                // Ignorar el resto de eventos comunes
+                console.log(`ℹ️ Evento ${event.eventType} no manejado explícitamente.`);
                 break;
         }
 
@@ -265,15 +265,16 @@ exports.createPortalSession = async (req, res) => {
         }
 
         // Crear sesión del portal del cliente
-        // Nota: El primer parámetro es el customerId, NO necesitas pasarlo en options
         const session = await paddle.customerPortalSessions.create(clinic.paddleCustomerId);
+
+        const portalUrl = session.urls?.general?.overview;
 
         console.log('✅ Sesión del portal creada:', {
             customerId: clinic.paddleCustomerId,
-            portalUrl: session.url
+            portalUrl: portalUrl
         });
 
-        res.json({ url: session.url });
+        res.json({ url: portalUrl });
 
     } catch (error) {
         console.error("❌ Error creando sesión de portal:", error);
