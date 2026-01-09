@@ -238,8 +238,16 @@ exports.createPortalSession = async (req, res) => {
 // Actualizar suscripción (Upgrade/Downgrade)
 exports.updateSubscription = async (req, res) => {
     try {
+        const { newPriceId } = req.body;
+        const user = await User.findById(req.user._id);
+        const clinic = await Clinic.findById(user.clinicId);
+
         if (!newPriceId) {
             return res.status(400).json({ error: "newPriceId es requerido." });
+        }
+
+        if (!clinic?.paddleSubscriptionId) {
+            return res.status(400).json({ error: 'No active subscription' });
         }
 
         // Si el cliente quiere "Free", eso significa CANCELAR la suscripción de pago.
