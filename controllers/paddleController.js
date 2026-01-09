@@ -235,101 +235,82 @@ exports.createPortalSession = async (req, res) => {
 };
 
 // Actualizar suscripción (Upgrade/Downgrade)
+// Actualizar suscripción (Upgrade/Downgrade)
 exports.updateSubscription = async (req, res) => {
     try {
         const { newPriceId } = req.body;
-        const userId = req.user._id;
-
-        if (!newPriceId) {
-            return res.status(400).json({ error: "newPriceId es requerido." });
-        }
-
-        const user = await User.findById(userId);
+        const user = await User.findById(req.user._id);
         const clinic = await Clinic.findById(user.clinicId);
 
-        if (!clinic || !clinic.paddleSubscriptionId || !clinic.paddleCustomerId) {
-            return res.status(400).json({ error: "La clínica no tiene una suscripción activa para actualizar." });
+        if (!clinic?.paddleSubscriptionId) {
+            return res.status(400).json({ error: 'No active subscription' });
         }
 
-        console.log(`🔄 Iniciando actualización de sub para ${clinic.paddleSubscriptionId} a precio ${newPriceId}`);
-
-        // 1. Obtener detalles de la suscripción actual
         const currentSub = await paddle.subscriptions.get(clinic.paddleSubscriptionId);
-        const currentItem = currentSub.items[0]; // Asumimos 1 item principal
+        const currentItem = currentSub.items[0];
 
-        if (!currentItem) {
-            return res.status(400).json({ error: "No se encontraron items en la suscripción actual." });
-        }
+        const currentPrice = currentItem.price.unitPrice.amount;
+        // Obtenemos precio nuevo para log y decisión (aunque transactions lo maneja)
+        const newPriceData = await paddle.prices.get(newPriceId);
+        const newPrice = newPriceData.unitPrice.amount;
 
-        // 2. Obtener precios para comparar (Upgrade vs Downgrade)
-        // Necesitamos saber el precio actual y el nuevo para decidir el modo de prorrateo
-        const currentPriceInfo = currentItem.price;
-        const newPriceInfo = await paddle.prices.get(newPriceId);
+        const isUpgrade = Number(newPrice) > Number(currentPrice);
 
-        // Calcular costo total actual (unit_price * quantity) si fuera necesario, 
-        // pero para determinar upgrade/downgrade suele bastar el precio unitario si la cantidad es 1.
-        // Asumimos cantidad 1 por licencia base.
-        const currentAmount = parseFloat(currentPriceInfo.unitPrice.amount);
-        const newAmount = parseFloat(newPriceInfo.unitPrice.amount);
+        console.log(
+            `${isUpgrade ? '📈 Upgrade' : '📉 Downgrade'} detectado: ${currentPrice} → ${newPrice}. Generando Checkout.`
+        );
 
-        let prorationMode = 'prorated_immediately'; // Default Upgrade
-
-        if (newAmount < currentAmount) {
-            console.log(`📉 Downgrade detectado (${currentAmount} -> ${newAmount}). Aplicando al siguiente ciclo.`);
-            prorationMode = 'prorated_next_billing_period';
-        } else {
-            console.log(`📈 Upgrade detectado (${currentAmount} -> ${newAmount}). Cobro inmediato.`);
-        }
-
-        // 3. Crear Transaction (Checkout) para actualizar
-        exports.updateSubscription = async (req, res) => {
-            try {
-                const { newPriceId } = req.body;
-                const user = await User.findById(req.user._id);
-                const clinic = await Clinic.findById(user.clinicId);
-
-                if (!clinic?.paddleSubscriptionId) {
-                return res.status(400).json({ error: 'No active subscription' });
-                }
-
-                const currentSub = await paddle.subscriptions.get(clinic.paddleSubscriptionId);
-                const currentPrice = currentSub.items[0].price.unitPrice.amount;
-                const newPrice = (await paddle.prices.get(newPriceId)).unitPrice.amount;
-
-                const isUpgrade = Number(newPrice) > Number(currentPrice);
-
-                console.log(
-                `${isUpgrade ? '📈 Upgrade' : '📉 Downgrade'} detectado: ${currentPrice} → ${newPrice}`
-                );
-
-                await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
-                items: [
-                    {
+        // Crear una transacción para actualizar la suscripción
+        // Esto NO aplica el cambio inmediatamente, solo crea la orden de pago/cambio
+        const transaction = await paddle.transactions.create({
+            customerId: clinic.paddleCustomerId,
+            subscriptionId: clinic.paddleSubscriptionId,
+            items: [
+                {
                     priceId: newPriceId,
-                    quantity: 1
-                    }
-                ],
-                prorationBillingMode: isUpgrade
-                    ? 'prorated_immediately'
-                    : 'prorated_next_billing_period'
-                });
+                    quantity: currentItem.quantity
+                }
+            ],
+            collectionMode: 'automatic', // Habilita checkout
+            billingDetails: isUpgrade
+                ? { prorationBillingMode: 'prorated_immediately' }
+                : { prorationBillingMode: 'prorated_next_billing_period' }
+        });
 
-                res.json({
+        // Obtener URL de checkout
+        let checkoutUrl = null;
+        if (transaction.checkout && transaction.checkout.url) {
+            checkoutUrl = transaction.checkout.url;
+        } else if (transaction.items && transaction.details?.checkout?.url) {
+            // Fallback access check
+            checkoutUrl = transaction.details.checkout.url;
+        }
+
+        /* 
+           Nota: Si el cambio es de costo $0 (ej. mismo precio o downgrade lejano), 
+           Paddle a veces completa la transacción automáticamente si no requiere acción del usuario.
+           En ese caso, devolvemos success directo.
+        */
+        if (!checkoutUrl && transaction.status === 'completed') {
+            return res.json({
                 success: true,
-                message: isUpgrade
-                    ? 'Plan actualizado. Se cobró la diferencia.'
-                    : 'Plan actualizado. El cambio aplicará en el próximo ciclo.'
-                });
+                message: "El plan se actualizó automáticamente (sin costo inmediato).",
+                url: null
+            });
+        }
 
-            } catch (err) {
-                console.error('❌ Error actualizando suscripción:', err);
-                res.status(500).json({ error: err.message });
-            }
-            };
+        if (checkoutUrl) {
+            res.json({ url: checkoutUrl });
+        } else {
+            // Si no hay URL y no está completed, algo raro pasó o es solo un borrador
+            console.warn("Transacción creada pero sin URL visible:", transaction.id);
+            // Devolvemos el ID por si el frontend quiere usar Paddle.Checkout.open({ transactionId: ... })
+            res.json({ transactionId: transaction.id });
+        }
 
-
-    } catch (error) {
-        console.error("❌ Error actualizando suscripción:", error);
-        res.status(500).json({ error: error.message || "Error al procesar la actualización." });
+    } catch (err) {
+        console.error('❌ Error generando checkout de actualización:', err);
+        res.status(500).json({ error: err.message });
     }
 };
+
