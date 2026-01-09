@@ -282,83 +282,51 @@ exports.updateSubscription = async (req, res) => {
         }
 
         // 3. Crear Transaction (Checkout) para actualizar
-        // Usamos paddle.checkouts.create para generar una URL donde el usuario confirma y paga la diferencia.
-        // Al pasar subscription_id, Paddle sabe que es una actualización.
-        const checkout = await paddle.checkouts.create({
-            customerId: clinic.paddleCustomerId,
-            items: [
-                {
-                    priceId: newPriceId,
-                    quantity: currentItem.quantity // Mantenemos la cantidad actual (ej: número de doctores extra si aplica, o 1 base)
+        exports.updateSubscription = async (req, res) => {
+            try {
+                const { newPriceId } = req.body;
+                const user = await User.findById(req.user._id);
+                const clinic = await Clinic.findById(user.clinicId);
+
+                if (!clinic?.paddleSubscriptionId) {
+                return res.status(400).json({ error: 'No active subscription' });
                 }
-            ],
-            customData: {
-                subscriptionId: clinic.paddleSubscriptionId, // Auxiliar para webhook si hiciera falta
-                clinicId: clinic._id.toString()
-            }
-        });
 
-        // Lamentablemente, checkouts.create estándar crea una NUEVA sub si no se vincula bien.
-        // Para actualizar una existente vía Checkout, NO se usa 'checkouts.create' directamte con subscriptionId en el body body (API v1 style).
-        // En Paddle Billing (v2), para actualizar con checkout, la documentación sugiere:
-        // Opción A: Usar subscription.update directamente (backend-to-backend).
-        // Opción B: Si se quiere que el user pague, transaction.create (preview/update).
+                const currentSub = await paddle.subscriptions.get(clinic.paddleSubscriptionId);
+                const currentPrice = currentSub.items[0].price.unitPrice.amount;
+                const newPrice = (await paddle.prices.get(newPriceId)).unitPrice.amount;
 
-        // CORRECCIÓN: Según requirements del usuario: "Crear una sesión de checkout... Paddle debe cobrar solo la diferencia".
-        // La forma correcta en API v2 para generar un link de pago por diferencia es crear una transacción borrador 
-        // basada en la actualización de la suscripción.
+                const isUpgrade = Number(newPrice) > Number(currentPrice);
 
-        const transaction = await paddle.transactions.create({
-            customerId: clinic.paddleCustomerId,
-            subscriptionId: clinic.paddleSubscriptionId, // VINCULACIÓN CLAVE
-            items: [
-                {
+                console.log(
+                `${isUpgrade ? '📈 Upgrade' : '📉 Downgrade'} detectado: ${currentPrice} → ${newPrice}`
+                );
+
+                await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
+                items: [
+                    {
                     priceId: newPriceId,
-                    quantity: currentItem.quantity
-                }
-            ],
-            collectionMode: 'automatic', // Para checkout
-            billingDetails: prorationMode === 'prorated_immediately'
-                ? { prorationBillingMode: 'prorated_immediately' }
-                : { prorationBillingMode: 'prorated_next_billing_period' }
-        });
+                    quantity: 1
+                    }
+                ],
+                prorationBillingMode: isUpgrade
+                    ? 'prorated_immediately'
+                    : 'prorated_next_billing_period'
+                });
 
-        // La transacción creada está en estado 'draft' o 'ready'. 
-        // Obtenemos el checkout url (transaction.checkout.url no existe directo, es transaction.details.checkout.url o similar? No, es transaction.url está deprecated? No.)
-        // En SDK node: transaction.checkout?.url
+                res.json({
+                success: true,
+                message: isUpgrade
+                    ? 'Plan actualizado. Se cobró la diferencia.'
+                    : 'Plan actualizado. El cambio aplicará en el próximo ciclo.'
+                });
 
-        // Si es downgrade diferido, el monto a pagar hoy podría ser 0.
-        // Aun así, enviamos la URL para que el usuario confirme el cambio.
-
-        console.log(`✅ Transacción de actualización creada: ${transaction.id}`);
-
-        // Obtener URL. A veces transaction.details?.checkout?.url
-        // Revisando SDK/Docs: transaction.checkout.url es la propiedad si collection_mode=automatic
-
-        /* 
-           NOTA CRÍTICA: Si es un downgrade diferido, Paddle puede que NO permita checkout inmediato si el monto es 0 o negativo(crédito).
-           Pero el endpoint pide devolver URL.
-           Si transaction.status es 'completed' (raro en update diferido) o 'ready'.
-        */
-
-        // Devolvemos la URL
-        let checkoutUrl = null;
-        if (transaction.checkout && transaction.checkout.url) {
-            checkoutUrl = transaction.checkout.url;
-        } else {
-            // Si no hay URL (ej. cambio inmediato sin costo o algo raro), intentamos obtenerla o asumimos éxito?
-            // Para upgrades con costo SIEMPRE hay URL.
-            // Para downgrades diferidos, a veces no hay cobro. Paddle actualiza la sub a "Scheduled Change".
-            // Si la transacción se cerró sola (ej coste 0), no hay checkout.
-
-            // Verificamos status
-            if (transaction.status === 'completed' || transaction.status === 'past_due') {
-                // Ya se aplicó?
-                return res.json({ message: "La actualización se ha procesado (posiblemente sin costo inmediato).", status: transaction.status });
+            } catch (err) {
+                console.error('❌ Error actualizando suscripción:', err);
+                res.status(500).json({ error: err.message });
             }
-        }
+            };
 
-        res.json({ url: checkoutUrl });
 
     } catch (error) {
         console.error("❌ Error actualizando suscripción:", error);
