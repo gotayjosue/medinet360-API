@@ -75,6 +75,9 @@ exports.handleWebhook = async (req, res) => {
             case 'subscription.activated':
                 await handleSubscriptionActivated(eventData);
                 break;
+            case 'transaction.completed':
+                await handleTransactionCompleted(eventData);
+                break;
             default:
                 console.log(`ℹ️ Evento ${event.eventType} no manejado explícitamente.`);
                 break;
@@ -95,11 +98,24 @@ async function handleSubscriptionCreated(sub) {
     // ---------------------------------------------------------
     let fingerprint = sub.paymentMethod?.card?.fingerprint;
 
+    // Log para depuración
+    console.log(`🔍 Debug Fingerprint - Inicio: paymentMethodId=${sub.paymentMethodId}, fingerprint=${fingerprint}`);
+
     // Si no viene en el webhook, intentamos obtener el método de pago desde la API
     if (!fingerprint && sub.paymentMethodId) {
         try {
+            console.log('DEBUG: Fetching payment method with ID:', sub.paymentMethodId);
             const paymentMethod = await paddle.paymentMethods.get(sub.customerId, sub.paymentMethodId);
-            fingerprint = paymentMethod.card?.fingerprint;
+            console.log('DEBUG: Fetched paymentMethod result structure:', Object.keys(paymentMethod));
+
+            if (paymentMethod.card) {
+                fingerprint = paymentMethod.card.fingerprint;
+            } else {
+                console.log('DEBUG: Payment method is not a standard card object:', JSON.stringify(paymentMethod, null, 2));
+                // Fallback o revisión de otros tipos
+            }
+
+            console.log(`🔍 Debug Fingerprint - Extraído tras API: ${fingerprint}`);
         } catch (e) {
             console.error("❌ Error recuperando método de pago para fingerprint:", e.message);
         }
@@ -109,11 +125,20 @@ async function handleSubscriptionCreated(sub) {
     if (sub.status === 'trialing') {
         if (!fingerprint) {
             console.warn("⚠️ Suscripción de trial sin fingerprint detectable. Procediendo con cautela...");
+            console.warn("Dato completo de sub (limitado):", JSON.stringify({ id: sub.id, paymentMethodId: sub.paymentMethodId }, null, 2));
         } else {
             const fingerprintExists = await TrialFingerprint.findOne({ cardFingerprint: fingerprint });
             if (fingerprintExists) {
                 console.error(`🚨 INTENTO DE FRAUDE: Tarjeta ${fingerprint} ya usó un trial. Cancelando suscripción ${sub.id}`);
-                await paddle.subscriptions.cancel(sub.id, { effectiveAt: 'immediately' });
+
+                try {
+                    await paddle.subscriptions.cancel(sub.id, { effectiveFrom: 'immediately' });
+                } catch (err) {
+                    console.error("Error al cancelar (effectiveFrom), intentando legacy:", err.message);
+                    // Fallback just in case
+                    await paddle.subscriptions.cancel(sub.id, { effectiveAt: 'immediately' }).catch(e => console.error("Final cancel fail:", e.message));
+                }
+
                 // No actualizamos la clínica ni mandamos email de bienvenida
                 return;
             }
@@ -245,6 +270,76 @@ async function handleSubscriptionCanceled(sub) {
 
     if (clinic && clinic.adminId) {
         await sendSubscriptionCancelledEmail(clinic.adminId.email, clinic.adminId.name, clinic.subscriptionEndDate);
+    }
+}
+
+async function handleTransactionCompleted(txn) {
+    if (!txn.subscriptionId) return; // Solo nos importa si está ligada a una suscripción
+
+    console.log(`💳 Procesando Transaction Completed: ${txn.id} para suscripción ${txn.subscriptionId}`);
+
+    // Buscar paymentMethodId en los pagos de la transacción
+    let paymentMethodId = txn.payments?.find(p => p.paymentMethodId)?.paymentMethodId;
+
+    // Si no está en payments, intentar buscar en el objeto principal (dependiendo de la versión de API)
+    if (!paymentMethodId && txn.paymentMethodId) {
+        paymentMethodId = txn.paymentMethodId;
+    }
+
+    if (!paymentMethodId) {
+        console.warn(`⚠️ Transacción ${txn.id} sin paymentMethodId visible.`);
+        return;
+    }
+
+    try {
+        const paymentMethod = await paddle.paymentMethods.get(txn.customerId, paymentMethodId);
+        let fingerprint = paymentMethod.card?.fingerprint;
+
+        if (fingerprint) {
+            console.log(`🔍 Fingerprint detectado en transacción: ${fingerprint}`);
+
+            // Verificar si ya existe el fingerprint
+            const fingerprintExists = await TrialFingerprint.findOne({ cardFingerprint: fingerprint });
+
+            // Verificamos si la suscripción actual es la misma que la registrada (para evitar falso positivo en la misma sub)
+            if (fingerprintExists && fingerprintExists.subscriptionId !== txn.subscriptionId) {
+                // Check if it's a trial subscription. transaction.created/completed might not carry status 'trialing' directly?
+                // But usually we assume if we found a fingerprint collision on a NEW subscription, it's bad.
+                // However, we should be careful. 
+                // If the user upgraded from Free to Pro, it's fine.
+                // We only care if they are STARTING a TRIAL.
+                // How do we know if this transaction is for a TRIAL?
+                // Usually trials have $0 transaction or is just 'trialing' status of subscription.
+                // Fetch subscription to check status.
+
+                const sub = await paddle.subscriptions.get(txn.subscriptionId);
+                if (sub.status === 'trialing') {
+                    console.error(`🚨 FRAUDE DETECTADO (vía Transaction): Tarjeta ${fingerprint} usada previamente. Cancelando sub ${txn.subscriptionId}`);
+                    await paddle.subscriptions.cancel(txn.subscriptionId, { effectiveFrom: 'immediately' });
+                    return;
+                }
+            }
+
+            // Si no existe, y es una suscripción de trial, deberíamos guardarlo si handleSubscriptionCreated falló?
+            // Sí, es un buen backup.
+            const sub = await paddle.subscriptions.get(txn.subscriptionId);
+            if (sub.status === 'trialing') {
+                // Intentar guardar si no existe
+                await TrialFingerprint.findOneAndUpdate(
+                    { cardFingerprint: fingerprint },
+                    {
+                        cardFingerprint: fingerprint,
+                        clinicId: sub.customData?.clinicId, // Podría no estar populated si no cuidamos customData
+                        subscriptionId: sub.id,
+                        firstUsedAt: new Date()
+                    },
+                    { upsert: true, new: true }
+                );
+            }
+
+        }
+    } catch (e) {
+        console.error("❌ Error verificando fraude en transacción:", e.message);
     }
 }
 
