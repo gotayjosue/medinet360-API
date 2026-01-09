@@ -278,37 +278,24 @@ exports.updateSubscription = async (req, res) => {
         );
 
         if (isUpgrade) {
-            // UPGRADE: Requiere pago inmediato de la diferencia. Creamos Checkout.
-            // Para upgrades, el default de Paddle suele ser prorrateo inmediato.
-            // No enviamos billingDetails porque causa error si no es para Invoice.
-            const transaction = await paddle.transactions.create({
-                customerId: clinic.paddleCustomerId,
-                subscriptionId: clinic.paddleSubscriptionId,
+            // UPGRADE: Usamos update directo para cobrar diferencia
+            await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
                 items: [
                     {
                         priceId: newPriceId,
                         quantity: currentItem.quantity
                     }
                 ],
-                collectionMode: 'automatic' // Habilita checkout
+                prorationBillingMode: 'prorated_immediately'
             });
 
-            // Obtener URL de checkout
-            let checkoutUrl = null;
-            if (transaction.checkout && transaction.checkout.url) {
-                checkoutUrl = transaction.checkout.url;
-            } else if (transaction.details?.checkout?.url) {
-                checkoutUrl = transaction.details.checkout.url;
-            }
-
-            if (checkoutUrl) {
-                return res.json({ url: checkoutUrl });
-            } else {
-                console.warn("Transacción de upgrade creada sin URL:", transaction.id);
-                return res.json({ transactionId: transaction.id });
-            }
+            return res.json({
+                success: true,
+                message: "Plan actualizado correctamente. Se ha realizado el cobro de la diferencia.",
+                url: null
+            });
         } else {
-            // DOWNGRADE: Aplicar al siguiente ciclo. No requiere pago inmediato.
+            // DOWNGRADE: Diferido
             // Usamos update directo para agendar el cambio.
             await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
                 items: [
