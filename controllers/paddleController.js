@@ -238,12 +238,21 @@ exports.createPortalSession = async (req, res) => {
 // Actualizar suscripción (Upgrade/Downgrade)
 exports.updateSubscription = async (req, res) => {
     try {
-        const { newPriceId } = req.body;
-        const user = await User.findById(req.user._id);
-        const clinic = await Clinic.findById(user.clinicId);
+        if (!newPriceId) {
+            return res.status(400).json({ error: "newPriceId es requerido." });
+        }
 
-        if (!clinic?.paddleSubscriptionId) {
-            return res.status(400).json({ error: 'No active subscription' });
+        // Si el cliente quiere "Free", eso significa CANCELAR la suscripción de pago.
+        // El frontend debe enviar 'free' o un identificador, pero si envía priceId vacío, ya lo catcheamos arriba.
+        // Si tienes un priceId específico para free en Paddle, úsalo. Si no, asumimos que "downgrade a free" es cancelar.
+        if (newPriceId === 'free') {
+            console.log(`📉 Downgrade a FREE solicitado para ${clinic.paddleSubscriptionId}. Cancelando al final del período.`);
+            await paddle.subscriptions.cancel(clinic.paddleSubscriptionId, { effectiveFrom: 'next_billing_period' });
+            return res.json({
+                success: true,
+                message: "Tu plan cambiará a Free al finalizar el ciclo de facturación actual.",
+                url: null
+            });
         }
 
         const currentSub = await paddle.subscriptions.get(clinic.paddleSubscriptionId);
