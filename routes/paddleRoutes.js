@@ -10,4 +10,7 @@ router.post('/webhook', paddleController.handleWebhook);
 // Portal Session (Protegido)
 router.post('/create-portal-session', requireAuth, paddleController.createPortalSession);
 
+// Update Subscription (Upgrade/Downgrade)
+router.post('/update-subscription', requireAuth, paddleController.updateSubscription);
+
 module.exports = router;
