@@ -1,3 +1,4 @@
+//This module is live now
 const { Paddle, Environment } = require('@paddle/paddle-node-sdk');
 const Clinic = require('../models/Clinic');
 const User = require('../models/User'); // Para obtener el email del admin
