@@ -2,9 +2,7 @@
 const { Paddle, Environment } = require('@paddle/paddle-node-sdk');
 const Clinic = require('../models/Clinic');
 const User = require('../models/User'); // Para obtener el email del admin
-const TrialFingerprint = require('../models/TrialFingerprint');
 const {
-    sendTrialStartedEmail,
     sendSubscriptionActiveEmail,
     sendSubscriptionCancelledEmail
 } = require('../utils/emailService');
@@ -75,9 +73,6 @@ exports.handleWebhook = async (req, res) => {
             case 'subscription.activated':
                 await handleSubscriptionActivated(eventData);
                 break;
-            case 'transaction.completed':
-                await handleTransactionCompleted(eventData);
-                break;
             default:
                 console.log(`ℹ️ Evento ${event.eventType} no manejado explícitamente.`);
                 break;
@@ -93,53 +88,6 @@ exports.handleWebhook = async (req, res) => {
 
 async function handleSubscriptionCreated(sub) {
     console.log(`🚀 Procesando handleSubscriptionCreated para: ${sub.id} (Status: ${sub.status})`);
-
-    // ---------------------------------------------------------
-    // 🛡️ SEGURIDAD: PREVENCIÓN DE FRAUDE EN TRIALS (1 por tarjeta)
-    // ---------------------------------------------------------
-    let fingerprint = sub.paymentMethod?.card?.fingerprint;
-
-    // Log para depuración
-    console.log(`🔍 Debug Fingerprint - Inicio: paymentMethodId=${sub.paymentMethodId}, fingerprint=${fingerprint}`);
-
-    // Si no viene en el webhook, intentamos obtener el método de pago desde la API
-    // 1. Intentar get directo
-    if (!fingerprint && sub.paymentMethodId) {
-        try {
-            const paymentMethod = await paddle.paymentMethods.get(sub.customerId, sub.paymentMethodId);
-            if (paymentMethod.card) {
-                fingerprint = paymentMethod.card.fingerprint;
-            } else if (paymentMethod.type === 'card' && paymentMethod.fingerprint) {
-                fingerprint = paymentMethod.fingerprint;
-            }
-            console.log(`🔍 Debug Fingerprint - Extraído tras API Get: ${fingerprint}`);
-        } catch (e) {
-            console.warn("⚠️ Error recuperando método de pago directo:", e.message);
-        }
-    }
-
-    // 2. Fallback: Listar métodos del cliente si falló lo anterior
-    if (!fingerprint) {
-        console.log(`⚠️ Fingerprint no encontrado tras intento directo, listando métodos del cliente...`);
-        fingerprint = await getFingerprintFromCustomer(sub.customerId);
-        if (fingerprint) console.log(`✅ Fingerprint recuperado vía List: ${fingerprint}`);
-    }
-
-    // Si encontramos fingerprint, validamos y guardamos usando la lógica unificada
-    if (fingerprint) {
-        await checkAndSaveFingerprint(fingerprint, sub.id, sub.customData?.clinicId);
-    } else {
-        if (sub.status === 'trialing') {
-            console.warn("⚠️ Suscripción de trial creada SIN fingerprint detectable tras todos los intentos.");
-        }
-    }
-
-    // Verificar si checkAndSaveFingerprint canceló la sub
-    const freshSub = await paddle.subscriptions.get(sub.id);
-    if (freshSub.status === 'canceled') {
-        console.log("🛑 Suscripción cancelada (posible fraude), deteniendo flujo de creación.");
-        return;
-    }
 
     // ---------------------------------------------------------
     // LÓGICA DE VINCULACIÓN DE CLÍNICA
@@ -185,9 +133,7 @@ async function handleSubscriptionCreated(sub) {
     const user = await User.findOne({ email: userEmail });
     const userName = user ? user.name : 'Usuario';
 
-    if (sub.status === 'trialing') {
-        await sendTrialStartedEmail(userEmail, userName, planName);
-    } else if (sub.status === 'active') {
+    if (sub.status === 'active') {
         await sendSubscriptionActiveEmail(userEmail, userName, planName);
     }
 }
@@ -251,92 +197,6 @@ async function handleSubscriptionCanceled(sub) {
     ).populate('adminId');
 
     await sendSubscriptionCancelledEmail(clinic.adminId.email, clinic.adminId.name, clinic.subscriptionEndDate);
-}
-
-// Helper para buscar fingerprint en los métodos guardados del cliente
-async function getFingerprintFromCustomer(customerId) {
-    try {
-        const paymentMethods = await paddle.paymentMethods.list(customerId);
-        // Buscamos cualquier método que tenga tarjeta y fingerprint
-        // Si hay varios, idealmente verificaríamos el último usado, pero para seguridad
-        // cualquier fingerprint asociado al cliente actual nos sirve para validar.
-        for (const pm of paymentMethods.data) {
-            if (pm.card?.fingerprint) {
-                return pm.card.fingerprint;
-            }
-        }
-    } catch (e) {
-        console.error(`❌ Error listando métodos de pago del cliente ${customerId}:`, e.message);
-    }
-    return null;
-}
-
-async function handleTransactionCompleted(txn) {
-    if (!txn.subscriptionId) return;
-
-    console.log(`💳 Procesando Transaction Completed: ${txn.id} para suscripción ${txn.subscriptionId}`);
-
-    let fingerprint = null;
-
-    // 1. Intentar obtener fingerprint directamente (casi nunca viene en webhook, pero por si acaso)
-    const paymentAttempt = txn.payments?.find(p => p.methodDetails?.card?.fingerprint);
-    if (paymentAttempt) {
-        fingerprint = paymentAttempt.methodDetails.card.fingerprint;
-        console.log(`✅ Fingerprint encontrado DIRECTAMENTE en transaction payments: ${fingerprint}`);
-    }
-
-    // 2. Fallback: Listar métodos de pago del cliente
-    if (!fingerprint) {
-        console.log(`⚠️ Fingerprint no visible en webhook, buscando en métodos guardados del cliente...`);
-        fingerprint = await getFingerprintFromCustomer(txn.customerId);
-        if (fingerprint) {
-            console.log(`✅ Fingerprint recuperado listando métodos del cliente: ${fingerprint}`);
-        }
-    }
-
-    if (fingerprint) {
-        await checkAndSaveFingerprint(fingerprint, txn.subscriptionId, txn.customData?.clinicId);
-    } else {
-        console.warn(`⚠️ No se pudo obtener fingerprint para la transacción ${txn.id} ni listando métodos.`);
-    }
-}
-
-// Lógica unificada de verificación y guardado
-async function checkAndSaveFingerprint(fingerprint, subscriptionId, clinicIdArg) {
-    // Verificar si ya existe el fingerprint
-    const fingerprintExists = await TrialFingerprint.findOne({ cardFingerprint: fingerprint });
-
-    // Verificamos si la suscripción actual es la misma que la registrada
-    if (fingerprintExists && fingerprintExists.subscriptionId !== subscriptionId) {
-        const sub = await paddle.subscriptions.get(subscriptionId);
-        if (sub.status === 'trialing') {
-            console.error(`🚨 FRAUDE DETECTADO: Tarjeta ${fingerprint} usada previamente. Cancelando sub ${subscriptionId}`);
-            try {
-                await paddle.subscriptions.cancel(subscriptionId, { effectiveFrom: 'immediately' });
-            } catch (cancelErr) {
-                await paddle.subscriptions.cancel(subscriptionId, { effectiveAt: 'immediately' }).catch(err => console.error('Error cancelando:', err));
-            }
-            return;
-        }
-    }
-
-    // Guardar si es trial y no existe
-    const sub = await paddle.subscriptions.get(subscriptionId);
-    if (sub.status === 'trialing') {
-        const clinicId = clinicIdArg || sub.customData?.clinicId;
-
-        await TrialFingerprint.findOneAndUpdate(
-            { cardFingerprint: fingerprint },
-            {
-                cardFingerprint: fingerprint,
-                clinicId: clinicId,
-                subscriptionId: sub.id,
-                firstUsedAt: new Date()
-            },
-            { upsert: true, new: true }
-        );
-        console.log(`💾 Fingerprint guardado/actualizado para trial: ${fingerprint}`);
-    }
 }
 
 // Generar sesión de portal de cliente
