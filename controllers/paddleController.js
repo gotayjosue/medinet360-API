@@ -274,56 +274,59 @@ exports.updateSubscription = async (req, res) => {
         const isUpgrade = Number(newPrice) > Number(currentPrice);
 
         console.log(
-            `${isUpgrade ? '📈 Upgrade' : '📉 Downgrade'} detectado: ${currentPrice} → ${newPrice}. Generando Checkout.`
+            `${isUpgrade ? '📈 Upgrade' : '📉 Downgrade'} detectado: ${currentPrice} → ${newPrice}.`
         );
 
-        // Crear una transacción para actualizar la suscripción
-        // Esto NO aplica el cambio inmediatamente, solo crea la orden de pago/cambio
-        const transaction = await paddle.transactions.create({
-            customerId: clinic.paddleCustomerId,
-            subscriptionId: clinic.paddleSubscriptionId,
-            items: [
-                {
-                    priceId: newPriceId,
-                    quantity: currentItem.quantity
-                }
-            ],
-            collectionMode: 'automatic', // Habilita checkout
-            billingDetails: isUpgrade
-                ? { prorationBillingMode: 'prorated_immediately' }
-                : { prorationBillingMode: 'prorated_next_billing_period' }
-        });
+        if (isUpgrade) {
+            // UPGRADE: Requiere pago inmediato de la diferencia. Creamos Checkout.
+            // Para upgrades, el default de Paddle suele ser prorrateo inmediato.
+            // No enviamos billingDetails porque causa error si no es para Invoice.
+            const transaction = await paddle.transactions.create({
+                customerId: clinic.paddleCustomerId,
+                subscriptionId: clinic.paddleSubscriptionId,
+                items: [
+                    {
+                        priceId: newPriceId,
+                        quantity: currentItem.quantity
+                    }
+                ],
+                collectionMode: 'automatic' // Habilita checkout
+            });
 
-        // Obtener URL de checkout
-        let checkoutUrl = null;
-        if (transaction.checkout && transaction.checkout.url) {
-            checkoutUrl = transaction.checkout.url;
-        } else if (transaction.items && transaction.details?.checkout?.url) {
-            // Fallback access check
-            checkoutUrl = transaction.details.checkout.url;
-        }
+            // Obtener URL de checkout
+            let checkoutUrl = null;
+            if (transaction.checkout && transaction.checkout.url) {
+                checkoutUrl = transaction.checkout.url;
+            } else if (transaction.details?.checkout?.url) {
+                checkoutUrl = transaction.details.checkout.url;
+            }
 
-        /* 
-           Nota: Si el cambio es de costo $0 (ej. mismo precio o downgrade lejano), 
-           Paddle a veces completa la transacción automáticamente si no requiere acción del usuario.
-           En ese caso, devolvemos success directo.
-        */
-        if (!checkoutUrl && transaction.status === 'completed') {
+            if (checkoutUrl) {
+                return res.json({ url: checkoutUrl });
+            } else {
+                console.warn("Transacción de upgrade creada sin URL:", transaction.id);
+                return res.json({ transactionId: transaction.id });
+            }
+        } else {
+            // DOWNGRADE: Aplicar al siguiente ciclo. No requiere pago inmediato.
+            // Usamos update directo para agendar el cambio.
+            await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
+                items: [
+                    {
+                        priceId: newPriceId,
+                        quantity: currentItem.quantity
+                    }
+                ],
+                prorationBillingMode: 'prorated_next_billing_period'
+            });
+
             return res.json({
                 success: true,
-                message: "El plan se actualizó automáticamente (sin costo inmediato).",
+                message: "Plan actualizado. El cambio se aplicará al finalizar el ciclo de facturación actual.",
                 url: null
             });
         }
 
-        if (checkoutUrl) {
-            res.json({ url: checkoutUrl });
-        } else {
-            // Si no hay URL y no está completed, algo raro pasó o es solo un borrador
-            console.warn("Transacción creada pero sin URL visible:", transaction.id);
-            // Devolvemos el ID por si el frontend quiere usar Paddle.Checkout.open({ transactionId: ... })
-            res.json({ transactionId: transaction.id });
-        }
 
     } catch (err) {
         console.error('❌ Error generando checkout de actualización:', err);
