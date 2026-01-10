@@ -298,15 +298,13 @@ exports.updateSubscription = async (req, res) => {
             // DOWNGRADE: Diferido
             // Usamos update directo para agendar el cambio.
             await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
-                scheduledChange:{
-                    items: [
-                        {
-                            priceId: newPriceId,
-                            quantity: currentItem.quantity
-                        }
-                    ],
-                    effectiveFrom: 'next_billing_period'
-                }
+                items: [
+                    {
+                        priceId: newPriceId,
+                        quantity: currentItem.quantity
+                    }
+                ],
+                effectiveFrom: 'next_billing_period'
             });
 
             return res.json({
