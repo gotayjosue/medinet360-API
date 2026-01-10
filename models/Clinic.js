@@ -5,6 +5,7 @@ const clinicSchema = new mongoose.Schema(
     name: { type: String, required: true },
     address: { type: String },
     phone: { type: String },
+    logoLink: { type: String },
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

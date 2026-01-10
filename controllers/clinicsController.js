@@ -46,12 +46,12 @@ const updateCustomFieldsTemplate = async (req, res) => {
 
 const updateClinic = async (req, res) => {
   const { id } = req.params;
-  const { name, address, phone } = req.body;
+  const { name, address, phone, logoLink } = req.body;
 
   try {
     const clinic = await Clinic.findByIdAndUpdate(
       id,
-      { name, address, phone },
+      { name, address, phone, logoLink },
       { new: true, runValidators: true }
     );
 
