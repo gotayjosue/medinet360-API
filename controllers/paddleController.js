@@ -304,12 +304,12 @@ exports.updateSubscription = async (req, res) => {
                         quantity: currentItem.quantity
                     }
                 ],
-                effectiveFrom: 'next_billing_period'
+                prorationBillingMode: 'prorated_next_billing_period'
             });
 
             return res.json({
                 success: true,
-                message: "Plan actualizado. El cambio se aplicará al finalizar el ciclo de facturación actual.",
+                message: "Plan actualizado. El cambio será inmediato. Solo en el caso de cambiar al plan free, el cambio se aplicará al finalizar el ciclo de facturación actual.",
                 url: null
             });
         }
