@@ -1,0 +1,125 @@
+const cloudinary = require("cloudinary").v2;
+
+// Configurar Cloudinary con variables de entorno
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/**
+ * Sube un archivo a Cloudinary
+ * @param {Buffer} fileBuffer - Buffer del archivo
+ * @param {string} folder - Carpeta en Cloudinary (ej: medinet360/clinicId/patientId)
+ * @param {string} resourceType - Tipo de recurso: 'image', 'video', 'raw'
+ * @param {string} fileName - Nombre original del archivo
+ * @returns {Promise<Object>} - Resultado de Cloudinary con public_id, url, etc.
+ */
+const uploadFile = async (fileBuffer, folder, resourceType, fileName) => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: folder,
+                resource_type: resourceType,
+                public_id: fileName.split(".")[0], // Usar nombre sin extensión
+                use_filename: true,
+                unique_filename: true,
+            },
+            (error, result) => {
+                if (error) {
+                    console.error("❌ Cloudinary upload error:", error);
+                    reject(error);
+                } else {
+                    resolve(result);
+                }
+            }
+        );
+
+        uploadStream.end(fileBuffer);
+    });
+};
+
+/**
+ * Elimina un archivo de Cloudinary
+ * @param {string} publicId - Public ID del archivo en Cloudinary
+ * @param {string} resourceType - Tipo de recurso: 'image', 'video', 'raw'
+ * @returns {Promise<Object>} - Resultado de la eliminación
+ */
+const deleteFile = async (publicId, resourceType) => {
+    try {
+        const result = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+        });
+        return result;
+    } catch (error) {
+        console.error("❌ Cloudinary delete error:", error);
+        throw error;
+    }
+};
+
+/**
+ * Genera una URL firmada temporal para acceso seguro
+ * @param {string} publicId - Public ID del archivo
+ * @param {string} resourceType - Tipo de recurso: 'image', 'video', 'raw'
+ * @param {number} expiresIn - Tiempo de expiración en segundos (default: 3600 = 1 hora)
+ * @returns {string} - URL firmada
+ */
+const generateSignedUrl = (publicId, resourceType, expiresIn = 3600) => {
+    const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
+
+    return cloudinary.url(publicId, {
+        resource_type: resourceType,
+        type: "authenticated",
+        sign_url: true,
+        expires_at: timestamp,
+    });
+};
+
+/**
+ * Genera URL firmada para miniatura (solo imágenes)
+ * @param {string} publicId - Public ID del archivo
+ * @param {number} width - Ancho de la miniatura
+ * @param {number} height - Alto de la miniatura
+ * @param {number} expiresIn - Tiempo de expiración en segundos
+ * @returns {string} - URL firmada de miniatura
+ */
+const generateThumbnailUrl = (publicId, width = 150, height = 150, expiresIn = 3600) => {
+    const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
+
+    return cloudinary.url(publicId, {
+        resource_type: "image",
+        type: "authenticated",
+        sign_url: true,
+        expires_at: timestamp,
+        transformation: [
+            { width, height, crop: "fill", gravity: "center" },
+            { quality: "auto", fetch_format: "auto" },
+        ],
+    });
+};
+
+/**
+ * Obtiene información de un recurso en Cloudinary
+ * @param {string} publicId - Public ID del archivo
+ * @param {string} resourceType - Tipo de recurso
+ * @returns {Promise<Object>} - Información del recurso
+ */
+const getResourceInfo = async (publicId, resourceType) => {
+    try {
+        const result = await cloudinary.api.resource(publicId, {
+            resource_type: resourceType,
+        });
+        return result;
+    } catch (error) {
+        console.error("❌ Cloudinary resource info error:", error);
+        throw error;
+    }
+};
+
+module.exports = {
+    uploadFile,
+    deleteFile,
+    generateSignedUrl,
+    generateThumbnailUrl,
+    getResourceInfo,
+};
