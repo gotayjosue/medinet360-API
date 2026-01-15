@@ -17,11 +17,9 @@ cloudinary.config({
  */
 const uploadFile = async (fileBuffer, folder, resourceType, fileName) => {
     return new Promise((resolve, reject) => {
-        // Obtenemos el nombre sin extensión de forma robusta
-        const parts = fileName.split(".");
-        const publicIdBase = parts.slice(0, -1).join(".").replace(/\s+/g, '_') || parts[0].replace(/\s+/g, '_');
-
-        // Para RAW forzamos la extensión en el public_id, para imágenes no.
+        // IMPORTANTE: Para recursos 'raw', Cloudinary requiere la extensión en el public_id.
+        // Para imágenes/videos, es mejor no incluirla para permitir transformaciones de formato.
+        const publicIdBase = fileName.split(".")[0].replace(/\s+/g, '_'); // Limpiar espacios
         const finalPublicId = resourceType === "raw" ? fileName.replace(/\s+/g, '_') : publicIdBase;
 
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -31,7 +29,7 @@ const uploadFile = async (fileBuffer, folder, resourceType, fileName) => {
                 public_id: finalPublicId,
                 use_filename: true,
                 unique_filename: true,
-                type: "authenticated",
+                type: "authenticated", // Asegurar que se suba como autenticado
             },
             (error, result) => {
                 if (error) {
@@ -70,36 +68,26 @@ const deleteFile = async (publicId, resourceType) => {
  * Genera una URL firmada temporal para acceso seguro
  * @param {string} publicId - Public ID del archivo
  * @param {string} resourceType - Tipo de recurso: 'image', 'video', 'raw'
- * @param {string} fileName - Nombre original del archivo
+ * @param {string} fileName - Nombre original del archivo (para extraer extensión)
  * @param {number} expiresIn - Tiempo de expiración en segundos (default: 3600 = 1 hora)
  * @returns {string} - URL firmada
  */
 const generateSignedUrl = (publicId, resourceType, fileName, expiresIn = 3600) => {
     const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
 
-    // Configuración base de la URL
-    const urlOptions = {
+    // Extraer extensión del nombre original si existe
+    const format = fileName ? fileName.split('.').pop().toLowerCase() : null;
+
+    // Para archivos RAW, Cloudinary NO usa el parámetro 'format' en la URL generada,
+    // el public_id ya debe contener la extensión (manejado en uploadFile).
+    return cloudinary.url(publicId, {
         resource_type: resourceType,
         type: "authenticated",
         sign_url: true,
         expires_at: timestamp,
-        secure: true,
-    };
-
-    // Si es un archivo RAW (PDF, etc.), NO debemos pasar 'format' porque la extensión ya está en el public_id.
-    // Además, forzamos descarga con flags para evitar el error "untrusted customer" en PDFs.
-    if (resourceType === "raw") {
-        urlOptions.flags = "attachment";
-        // Algunas versiones del SDK prefieren esta opción directa para forzar descarga
-        // urlOptions.attachment = true; 
-    } else {
-        // Para imágenes sí pasamos el formato para permitir transformaciones
-        if (fileName && fileName.includes('.')) {
-            urlOptions.format = fileName.split('.').pop().toLowerCase();
-        }
-    }
-
-    return cloudinary.url(publicId, urlOptions);
+        format: resourceType !== "raw" ? format : null,
+        secure: true
+    });
 };
 
 /**
@@ -113,8 +101,11 @@ const generateSignedUrl = (publicId, resourceType, fileName, expiresIn = 3600) =
  */
 const generateThumbnailUrl = (publicId, fileName, width = 150, height = 150, expiresIn = 3600) => {
     const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
-    const format = fileName && fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : null;
 
+    const format = fileName ? fileName.split('.').pop().toLowerCase() : null;
+
+    // IMPORTANTE: Quitamos f_auto y q_auto para recursos autenticados ya que 
+    // a veces interfieren con la generación de la extensión en el path firmado.
     return cloudinary.url(publicId, {
         resource_type: "image",
         type: "authenticated",
