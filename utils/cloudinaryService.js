@@ -64,14 +64,18 @@ const deleteFile = async (publicId, resourceType) => {
  * @param {number} expiresIn - Tiempo de expiración en segundos (default: 3600 = 1 hora)
  * @returns {string} - URL firmada
  */
-const generateSignedUrl = (publicId, resourceType, expiresIn = 3600) => {
+const generateSignedUrl = (publicId, resourceType, fileName, expiresIn = 3600) => {
     const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
+
+    // Extraer extensión del nombre original si existe
+    const format = fileName ? fileName.split('.').pop() : null;
 
     return cloudinary.url(publicId, {
         resource_type: resourceType,
         type: "authenticated",
         sign_url: true,
         expires_at: timestamp,
+        format: format, // Crucial para evitar 404 en recursos autenticados
     });
 };
 
@@ -83,14 +87,18 @@ const generateSignedUrl = (publicId, resourceType, expiresIn = 3600) => {
  * @param {number} expiresIn - Tiempo de expiración en segundos
  * @returns {string} - URL firmada de miniatura
  */
-const generateThumbnailUrl = (publicId, width = 150, height = 150, expiresIn = 3600) => {
+const generateThumbnailUrl = (publicId, fileName, width = 150, height = 150, expiresIn = 3600) => {
     const timestamp = Math.floor(Date.now() / 1000) + expiresIn;
+
+    // Extraer extensión del nombre original
+    const format = fileName ? fileName.split('.').pop() : null;
 
     return cloudinary.url(publicId, {
         resource_type: "image",
         type: "authenticated",
         sign_url: true,
         expires_at: timestamp,
+        format: format,
         transformation: [
             { width, height, crop: "fill", gravity: "center" },
             { quality: "auto", fetch_format: "auto" },

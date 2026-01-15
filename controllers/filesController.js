@@ -75,7 +75,8 @@ const uploadFile = async (req, res) => {
         // Generar URL firmada para respuesta
         const signedUrl = cloudinaryService.generateSignedUrl(
             uploadResult.public_id,
-            resourceType
+            resourceType,
+            file.originalname // Pasar nombre original para la extensión
         );
 
         res.status(201).json({
@@ -137,14 +138,16 @@ const getPatientFiles = async (req, res) => {
         const filesWithUrls = files.map((file) => {
             const signedUrl = cloudinaryService.generateSignedUrl(
                 file.cloudinaryPublicId,
-                file.cloudinaryResourceType
+                file.cloudinaryResourceType,
+                file.fileName
             );
 
             // Generar miniatura solo para imágenes
             let thumbnailUrl = null;
             if (file.cloudinaryResourceType === "image") {
                 thumbnailUrl = cloudinaryService.generateThumbnailUrl(
-                    file.cloudinaryPublicId
+                    file.cloudinaryPublicId,
+                    file.fileName
                 );
             }
 
@@ -200,7 +203,8 @@ const getFileById = async (req, res) => {
         // Generar URL firmada
         const signedUrl = cloudinaryService.generateSignedUrl(
             file.cloudinaryPublicId,
-            file.cloudinaryResourceType
+            file.cloudinaryResourceType,
+            file.fileName
         );
 
         res.status(200).json({
@@ -284,7 +288,8 @@ const updateFile = async (req, res) => {
         // Generar URL firmada
         const signedUrl = cloudinaryService.generateSignedUrl(
             existingFile.cloudinaryPublicId,
-            existingFile.cloudinaryResourceType
+            existingFile.cloudinaryResourceType,
+            existingFile.fileName
         );
 
         res.status(200).json({
