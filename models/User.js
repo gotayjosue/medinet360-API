@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema(
       createAppointment: { type: Boolean, default: false },
       editAppointment: { type: Boolean, default: false },
       deleteAppointment: { type: Boolean, default: false },
+      manageFiles: { type: Boolean, default: false },
     },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
