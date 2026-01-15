@@ -8,12 +8,12 @@ const PLAN_LIMITS = {
         maxFileSizeBytes: 0,
         maxStorageBytes: 0,
     },
-    pro: {
+    clinic_pro: {
         canUpload: true,
         maxFileSizeBytes: 50 * 1024 * 1024, // 50 MB
         maxStorageBytes: 500 * 1024 * 1024, // 500 MB
     },
-    plus: {
+    clinic_plus: {
         canUpload: true,
         maxFileSizeBytes: 200 * 1024 * 1024, // 200 MB
         maxStorageBytes: 5 * 1024 * 1024 * 1024, // 5 GB
