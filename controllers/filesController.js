@@ -21,6 +21,10 @@ const uploadFile = async (req, res) => {
         const { patientId, category, description } = req.body;
         const file = req.file;
 
+        if (req.fileValidationError) {
+            return res.status(400).json({ error: req.fileValidationError });
+        }
+
         if (!file) {
             return res.status(400).json({ error: "No se proporcionó ningún archivo" });
         }
@@ -249,6 +253,11 @@ const updateFile = async (req, res) => {
             return res.status(404).json({
                 error: "Archivo no encontrado o no pertenece a tu clínica",
             });
+        }
+
+        // Si hay error de validación de archivo nuevo
+        if (req.fileValidationError) {
+            return res.status(400).json({ error: req.fileValidationError });
         }
 
         // Si se proporciona un nuevo archivo, reemplazar en Cloudinary

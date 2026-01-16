@@ -17,6 +17,24 @@ const {
     getClinicStorageStats,
 } = require("../controllers/filesController");
 
+// Tipos de archivos permitidos
+const ALLOWED_MIME_TYPES = [
+    // Imágenes
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/bmp",
+    "image/svg+xml",
+    "image/tiff",
+    // Word
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    // Excel
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+
 // Configurar multer para manejar archivos en memoria
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -24,6 +42,14 @@ const upload = multer({
     limits: {
         fileSize: 200 * 1024 * 1024, // 200 MB máximo (se validará por plan después)
     },
+    fileFilter: (req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            req.fileValidationError = "Formato de archivo no permitido. Solo se aceptan imágenes, Word y Excel.";
+            cb(null, false);
+        }
+    }
 });
 
 /**
