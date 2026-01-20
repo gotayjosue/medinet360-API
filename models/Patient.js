@@ -4,13 +4,13 @@ const { type } = require("os");
 const patientSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    lastName: {type: String, required: true},
-    email: { type: String, required: true },
-    phone: { type: String, required: true},
+    lastName: {type: String, required: true },
+    email: { type: String },
+    phone: { type: String, required: true },
     birthday: {type: String, required: true },
-    age: { type: Number, required: true},
-    gender: { type: String, required: true},
-    notes: { type: String},
+    age: { type: Number, required: true },
+    gender: { type: String, required: true },
+    notes: { type: String },
     clinicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Clinic",

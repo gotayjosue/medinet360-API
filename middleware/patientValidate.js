@@ -7,7 +7,7 @@ validate.patientValidationRules = () => {
     body('name').notEmpty().withMessage('Name is required'),
     body('lastName').notEmpty().withMessage('Last name is required'),
     body('email')
-    .notEmpty().withMessage('Email is required')
+    .optional({ checkFalsy: true })
     .isEmail().withMessage('Email is not valid'),
     body('phone').notEmpty().withMessage('Phone number is required'),
     body('birthday')
