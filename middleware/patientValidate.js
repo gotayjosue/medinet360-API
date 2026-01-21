@@ -4,20 +4,20 @@ const validate = {};
 
 validate.patientValidationRules = () => {
   return [
-    body('name').notEmpty().withMessage('Name is required'),
-    body('lastName').notEmpty().withMessage('Last name is required'),
+    body('name').notEmpty().withMessage('dashboard.patients.messages.errors.no_name'),
+    body('lastName').notEmpty().withMessage('dashboard.patients.messages.errors.no_lastName'),
     body('email')
     .optional({ checkFalsy: true })
-    .isEmail().withMessage('Email is not valid'),
-    body('phone').notEmpty().withMessage('Phone number is required'),
+    .isEmail().withMessage('dashboard.patients.messages.errors.invalid_email'),
+    body('phone').notEmpty().withMessage('dashboard.patients.messages.errors.no_phone'),
     body('birthday')
-    .notEmpty().withMessage('Birthday is required')
-    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Birthday must be in YYYY-MM-DD format (e.g., 1998-11-17)'),
+    .notEmpty().withMessage('dashboard.patients.messages.errors.no_birthday')
+    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('dashboard.patients.messages.errors.invalid_birthday'),
     body('gender')
-    .notEmpty().withMessage('Gender is required')
+    .notEmpty().withMessage('dashboard.patients.messages.errors.no_gender')
     .trim()
     .toLowerCase()
-    .isIn(['male', 'female']).withMessage('Gender must be "male" or "female"'),
+    .isIn(['male', 'female']).withMessage('dashboard.patients.messages.errors.invalid_gender'),
   ];
 };
 
