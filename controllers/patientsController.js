@@ -56,7 +56,7 @@ const createPatient = async (req, res) => {
     if (currentPlan === 'free') {
       const count = await Patient.countDocuments({ clinicId: req.user.clinicId });
       if (count >= 5) {
-        return res.status(403).json({ error: "Has alcanzado el límite de 5 pacientes del plan gratuito. Actualiza tu plan para añadir más." });
+        return res.status(409).json({ error: "Has alcanzado el límite de 5 pacientes del plan gratuito. Actualiza tu plan para añadir más." });
       }
     }
 
