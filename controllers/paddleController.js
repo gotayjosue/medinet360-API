@@ -181,7 +181,7 @@ async function handleSubscriptionCanceled(sub) {
     const isExpired = !endDate || new Date(endDate) <= new Date();
 
     const updateData = {
-        subscriptionStatus: isExpired ? 'active' : 'canceled',
+        subscriptionStatus: isExpired ? 'canceled' : 'active',
         subscriptionEndDate: endDate
     };
 
@@ -278,6 +278,14 @@ exports.updateSubscription = async (req, res) => {
         );
 
         if (isUpgrade) {
+            // Quitando cancelación programada si existe
+            const hasScheduledCancel =
+                currentSub.scheduledChange?.action === 'cancel';
+
+            if (hasScheduledCancel) {
+                console.log('🧹 Eliminando cancelación programada antes del upgrade');
+                await paddle.subscriptions.resume(clinic.paddleSubscriptionId);
+            }
             // UPGRADE: Usamos update directo para cobrar diferencia
             await paddle.subscriptions.update(clinic.paddleSubscriptionId, {
                 items: [
