@@ -5,19 +5,19 @@ const validate = {};
 validate.appointmentValidationRules = () => {
   return [
     body('patientId')
-    .notEmpty().withMessage('Patient name is required'),
+    .notEmpty().withMessage('dashboard.appointments.messages.errors.no_patient'),
     body('date')
-    .notEmpty().withMessage('Date is required')
-    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Date must be in YYYY-MM-DD format (e.g., 1998-11-17)'),
+    .notEmpty().withMessage('dashboard.appointments.messages.errors.no_date')
+    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('dashboard.appointments.messages.errors.invalid_date'),
     body('hour')
-    .notEmpty().withMessage('Hour is required'),
+    .notEmpty().withMessage('dashboard.appointments.messages.errors.no_time'),
     body('duration')
-    .notEmpty().withMessage('Duration is required')
-    .isNumeric().withMessage('Duration must be a number'),
+    .notEmpty().withMessage('dashboard.appointments.messages.errors.no_duration')
+    .isNumeric().withMessage('dashboard.appointments.messages.errors.invalid_duration'),
     body('status')
     .trim()
     .toLowerCase()
-    .isIn(['scheduled', 'pending', 'completed', 'canceled']).withMessage('Status must be "scheduled", "pending", "completed" or "canceled"'),
+    .isIn(['scheduled', 'pending', 'completed', 'canceled']).withMessage('dashboard.appointments.messages.errors.invalid_status'),
   ];
 };
 
