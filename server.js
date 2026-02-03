@@ -17,6 +17,7 @@ const assistantRoutes = require("./routes/assistantRoutes.js");
 const paddleRoutes = require("./routes/paddleRoutes.js");
 const reportsRoutes = require("./routes/reportsRoutes.js");
 const filesRoutes = require("./routes/filesRoutes.js");
+const inventoryRoutes = require("./routes/inventoryRoutes.js");
 
 // Configuración
 app.use(session({
@@ -78,6 +79,7 @@ app.use("/api/assistants", assistantRoutes);
 app.use("/api/paddle", paddleRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/files", filesRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server on http://localhost:${PORT}`));
