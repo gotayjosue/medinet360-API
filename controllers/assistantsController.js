@@ -218,7 +218,8 @@ const updateAssistantPermissions = async (req, res) => {
       'createAppointment',
       'editAppointment',
       'deleteAppointment',
-      'manageFiles'
+      'manageFiles',
+      'manageInventory'
     ];
 
     // 4️⃣ Actualizar solo permisos permitidos
